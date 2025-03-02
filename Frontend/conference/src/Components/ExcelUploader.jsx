@@ -1171,9 +1171,6 @@
 
 // export default ExcelUploader;
 
-
-
-
 // import React, { useState } from "react";
 // import * as XLSX from "xlsx";
 
@@ -1339,8 +1336,193 @@
 
 // export default ExcelUploader;
 
-// ExcelUploader.jsx (Updated UI + Logic)
-import React, { useState } from "react";
+// import React, { useState } from "react";
+// import * as XLSX from "xlsx";
+// import SheetModal from "./SheetModal";
+
+// const ExcelUploader = () => {
+//   const [data, setData] = useState([]);
+//   const [expandedDomains, setExpandedDomains] = useState({});
+//   const [expandedRooms, setExpandedRooms] = useState({});
+//   const [selectedSession, setSelectedSession] = useState(null);
+//   const [isModalOpen, setIsModalOpen] = useState(false);
+
+//   const handleFileUpload = (event) => {
+//     const file = event.target.files[0];
+//     if (!file) return;
+//     const reader = new FileReader();
+//     reader.readAsBinaryString(file);
+//     reader.onload = (e) => {
+//       const binaryString = e.target.result;
+//       const workbook = XLSX.read(binaryString, { type: "binary" });
+//       const sheetName = workbook.SheetNames[0];
+//       const sheet = workbook.Sheets[sheetName];
+//       const parsedData = XLSX.utils.sheet_to_json(sheet);
+//       setData(parsedData);
+//     };
+//   };
+
+//   const startTime = 9 * 60;
+//   const presentationDuration = 30;
+//   const maxSlotsPerRoom = 12;
+//   const breaks = [
+//     { start: 11 * 60, duration: 20, label: "Short Break" },
+//     { start: 13 * 60 + 20, duration: 40, label: "Lunch Break" },
+//   ];
+
+//   const scheduleTimetable = (data) => {
+//     const groupedDomains = {};
+//     data.forEach((item) => {
+//       if (!groupedDomains[item.Domain]) {
+//         groupedDomains[item.Domain] = [];
+//       }
+//       groupedDomains[item.Domain].push(item);
+//     });
+
+//     const timetable = {};
+//     let roomCounter = 1;
+//     Object.keys(groupedDomains).forEach((domain) => {
+//       const papers = groupedDomains[domain];
+//       timetable[domain] = [];
+//       let currentRoomPapers = [];
+//       let currentRoomStart = startTime;
+//       papers.forEach((paper) => {
+//         if (currentRoomPapers.length === maxSlotsPerRoom) {
+//           timetable[domain].push({
+//             room: `Room ${roomCounter}`,
+//             schedule: createRoomSchedule(currentRoomPapers, currentRoomStart),
+//           });
+//           roomCounter++;
+//           currentRoomPapers = [];
+//           currentRoomStart = startTime;
+//         }
+//         currentRoomPapers.push(paper);
+//       });
+//       if (currentRoomPapers.length > 0) {
+//         timetable[domain].push({
+//           room: `Room ${roomCounter}`,
+//           schedule: createRoomSchedule(currentRoomPapers, currentRoomStart),
+//         });
+//         roomCounter++;
+//       }
+//     });
+//     return timetable;
+//   };
+
+//   const createRoomSchedule = (papers, start) => {
+//     const roomSchedule = [];
+//     let currentTime = start;
+
+//     papers.forEach((paper) => {
+//       breaks.forEach((b) => {
+//         if (currentTime >= b.start && currentTime < b.start + b.duration) {
+//           roomSchedule.push({
+//             time: formatTime(b.start),
+//             teamID: "--",
+//             presenter: "--",
+//             paperTitle: b.label,
+//             synopsis: "Break Time",
+//           });
+//           currentTime = b.start + b.duration;
+//         }
+//       });
+//       if (currentTime > 13 * 60 + 20 && currentTime < 14 * 60) {
+//         currentTime = 14 * 60;
+//       }
+//       roomSchedule.push({
+//         time: formatTime(currentTime),
+//         teamID: paper.TeamId,
+//         presenter: paper.Presenter,
+//         paperTitle: paper.Paper,
+//         synopsis: paper.Synopsis,
+//       });
+//       currentTime += presentationDuration;
+//     });
+//     return roomSchedule;
+//   };
+
+//   const formatTime = (minutes) => {
+//     const hrs = Math.floor(minutes / 60);
+//     const mins = minutes % 60;
+//     return `${hrs.toString().padStart(2, "0")}:${mins
+//       .toString()
+//       .padStart(2, "0")}`;
+//   };
+
+//   const timetable = scheduleTimetable(data);
+
+//   const toggleDomain = (domain) => {
+//     setExpandedDomains((prev) => ({ ...prev, [domain]: !prev[domain] }));
+//   };
+
+//   const toggleRoom = (roomName) => {
+//     setExpandedRooms((prev) => ({ ...prev, [roomName]: !prev[roomName] }));
+//   };
+
+//   const openModal = (session) => {
+//     setSelectedSession(session);
+//     setIsModalOpen(true);
+//   };
+
+//   const closeModal = () => {
+//     setIsModalOpen(false);
+//     setSelectedSession(null);
+//   };
+
+//   return (
+//     <div className="p-6 bg-white min-h-screen">
+//       <h2 className="text-2xl font-bold mb-4 text-gray-800">
+//         Upload Excel File
+//       </h2>
+//       <input
+//         type="file"
+//         accept=".xlsx, .xls"
+//         onChange={handleFileUpload}
+//         className="mb-4 block border p-2 rounded"
+//       />
+//       {Object.keys(timetable).map((domain) => (
+//         <div key={domain} className="mb-6 border rounded-lg shadow-lg">
+//           <div
+//             className="bg-blue-600 text-white p-3 cursor-pointer"
+//             onClick={() => toggleDomain(domain)}
+//           >
+//             {domain} {expandedDomains[domain] ? "▲" : "▼"}
+//           </div>
+//           {expandedDomains[domain] &&
+//             timetable[domain].map((room, idx) => (
+//               <div key={idx} className="border-l pl-4">
+//                 <div
+//                   className="bg-gray-500 text-white p-3 cursor-pointer"
+//                   onClick={() => toggleRoom(room.room)}
+//                 >
+//                   {room.room} {expandedRooms[room.room] ? "▲" : "▼"}
+//                 </div>
+//                 {expandedRooms[room.room] &&
+//                   room.schedule.map((session, sIdx) => (
+//                     <div
+//                       key={sIdx}
+//                       className="p-2 border-b cursor-pointer hover:bg-gray-200"
+//                       onClick={() => openModal(session)}
+//                     >
+//                       {session.time} - {session.paperTitle}
+//                     </div>
+//                   ))}
+//               </div>
+//             ))}
+//         </div>
+//       ))}
+//       <SheetModal
+//         isOpen={isModalOpen}
+//         onClose={closeModal}
+//         session={selectedSession}
+//       />
+//     </div>
+//   );
+// };
+
+// export default ExcelUploader;
+
+import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import SheetModal from "./SheetModal";
 
@@ -1350,8 +1532,19 @@ const ExcelUploader = () => {
   const [expandedRooms, setExpandedRooms] = useState({});
   const [selectedSession, setSelectedSession] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchType, setSearchType] = useState("default");
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [roomMapping, setRoomMapping] = useState({}); // Store domain -> room number mapping
 
-  // Handle file upload
+  // Update current time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -1364,15 +1557,53 @@ const ExcelUploader = () => {
       const sheet = workbook.Sheets[sheetName];
       const parsedData = XLSX.utils.sheet_to_json(sheet);
       setData(parsedData);
+
+      // Generate room numbers based on the original data
+      const mapping = generateRoomMapping(parsedData);
+      setRoomMapping(mapping);
     };
   };
 
-  // Scheduling Logic
-  const startTime = 9 * 60; // 9:00 AM in minutes
-  const presentationDuration = 30;
-  const maxSlotsPerRoom = 12;
+  const generateRoomMapping = (data) => {
+    const groupedDomains = {};
+    data.forEach((item) => {
+      if (!groupedDomains[item.Domain]) {
+        groupedDomains[item.Domain] = [];
+      }
+      groupedDomains[item.Domain].push(item);
+    });
 
-  const scheduleTimetable = (data) => {
+    const mapping = {};
+    let roomCounter = 1;
+    Object.keys(groupedDomains).forEach((domain) => {
+      const papers = groupedDomains[domain];
+      mapping[domain] = [];
+      let currentRoomPapers = [];
+      papers.forEach((paper) => {
+        if (currentRoomPapers.length === maxSlotsPerRoom) {
+          mapping[domain].push(`Room ${roomCounter}`);
+          roomCounter++;
+          currentRoomPapers = [];
+        }
+        currentRoomPapers.push(paper);
+      });
+      if (currentRoomPapers.length > 0) {
+        mapping[domain].push(`Room ${roomCounter}`);
+        roomCounter++;
+      }
+    });
+    return mapping;
+  };
+
+  const startTime = 9 * 60; // 9:00 AM in minutes
+  const presentationDuration = 30; // 30 minutes per session
+  const maxSlotsPerRoom = 12;
+  const breaks = [
+    { start: 11 * 60, duration: 20, label: "Short Break" }, // 11:00 AM - 11:20 AM
+    { start: 13 * 60 + 20, duration: 40, label: "Lunch Break" }, // 1:20 PM - 2:00 PM
+  ];
+
+  const scheduleTimetable = (data, roomMapping) => {
     const groupedDomains = {};
     data.forEach((item) => {
       if (!groupedDomains[item.Domain]) {
@@ -1382,19 +1613,20 @@ const ExcelUploader = () => {
     });
 
     const timetable = {};
-    let roomCounter = 1;
     Object.keys(groupedDomains).forEach((domain) => {
       const papers = groupedDomains[domain];
       timetable[domain] = [];
       let currentRoomPapers = [];
       let currentRoomStart = startTime;
+      let roomIndex = 0; // Track room index for this domain
+
       papers.forEach((paper) => {
         if (currentRoomPapers.length === maxSlotsPerRoom) {
           timetable[domain].push({
-            room: `Room ${roomCounter}`,
+            room: roomMapping[domain][roomIndex], // Use pre-calculated room number
             schedule: createRoomSchedule(currentRoomPapers, currentRoomStart),
           });
-          roomCounter++;
+          roomIndex++;
           currentRoomPapers = [];
           currentRoomStart = startTime;
         }
@@ -1402,10 +1634,10 @@ const ExcelUploader = () => {
       });
       if (currentRoomPapers.length > 0) {
         timetable[domain].push({
-          room: `Room ${roomCounter}`,
+          room: roomMapping[domain][roomIndex], // Use pre-calculated room number
           schedule: createRoomSchedule(currentRoomPapers, currentRoomStart),
         });
-        roomCounter++;
+        roomIndex++;
       }
     });
     return timetable;
@@ -1414,27 +1646,41 @@ const ExcelUploader = () => {
   const createRoomSchedule = (papers, start) => {
     const roomSchedule = [];
     let currentTime = start;
-    const breaks = [
-      { start: 11 * 60, duration: 20 },
-      { start: 13 * 60 + 20, duration: 40 },
-    ];
+
     papers.forEach((paper) => {
+      // Check if the current time falls within a break
       breaks.forEach((b) => {
         if (currentTime >= b.start && currentTime < b.start + b.duration) {
-          currentTime = b.start + b.duration;
+          roomSchedule.push({
+            time: `${formatTime(b.start)} - ${formatTime(
+              b.start + b.duration
+            )}`,
+            teamID: "--",
+            presenter: "--",
+            paperTitle: b.label,
+            synopsis: "Break Time",
+          });
+          currentTime = b.start + b.duration; // Move time to the end of the break
         }
       });
+
+      // Check if the current time is during lunch break
       if (currentTime > 13 * 60 + 20 && currentTime < 14 * 60) {
-        currentTime = 14 * 60;
+        currentTime = 14 * 60; // Move time to 2:00 PM
       }
+
+      // Add the session with start and finish time
+      const finishTime = currentTime + presentationDuration;
       roomSchedule.push({
-        time: formatTime(currentTime),
+        time: `${formatTime(currentTime)} - ${formatTime(finishTime)}`, // Display start and finish time
         teamID: paper.TeamId,
         presenter: paper.Presenter,
         paperTitle: paper.Paper,
         synopsis: paper.Synopsis,
+        startTime: currentTime, // Store start time for comparison
+        finishTime: finishTime, // Store finish time for comparison
       });
-      currentTime += presentationDuration;
+      currentTime = finishTime; // Move to the next session
     });
     return roomSchedule;
   };
@@ -1442,10 +1688,29 @@ const ExcelUploader = () => {
   const formatTime = (minutes) => {
     const hrs = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+    return `${hrs.toString().padStart(2, "0")}:${mins
+      .toString()
+      .padStart(2, "0")}`;
   };
 
-  const timetable = scheduleTimetable(data);
+  const filterData = (data, searchTerm, searchType) => {
+    if (searchType === "default" || !searchTerm) {
+      return data;
+    }
+    return data.filter((item) => {
+      if (searchType === "teamID") {
+        return item.TeamId.toLowerCase().includes(searchTerm.toLowerCase());
+      } else if (searchType === "presenter") {
+        return item.Presenter.toLowerCase().includes(searchTerm.toLowerCase());
+      } else if (searchType === "paperTitle") {
+        return item.Paper.toLowerCase().includes(searchTerm.toLowerCase());
+      }
+      return true;
+    });
+  };
+
+  const filteredData = filterData(data, searchTerm, searchType);
+  const timetable = scheduleTimetable(filteredData, roomMapping);
 
   const toggleDomain = (domain) => {
     setExpandedDomains((prev) => ({ ...prev, [domain]: !prev[domain] }));
@@ -1465,37 +1730,94 @@ const ExcelUploader = () => {
     setSelectedSession(null);
   };
 
+  // Convert current time to minutes for comparison
+  const getCurrentTimeInMinutes = () => {
+    const now = currentTime;
+    return now.getHours() * 60 + now.getMinutes();
+  };
+
+  // Check if a session is the current slot
+  const isCurrentSlot = (session) => {
+    const currentTimeInMinutes = getCurrentTimeInMinutes();
+    return (
+      currentTimeInMinutes >= session.startTime &&
+      currentTimeInMinutes < session.finishTime
+    );
+  };
+
   return (
     <div className="p-6 bg-white min-h-screen">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Upload Excel File</h2>
-      <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="mb-4 block border p-2 rounded" />
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">
+        Upload Excel File
+      </h2>
+      <input
+        type="file"
+        accept=".xlsx, .xls"
+        onChange={handleFileUpload}
+        className="mb-4 block border p-2 rounded"
+      />
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border p-2 rounded"
+        />
+        <select
+          value={searchType}
+          onChange={(e) => setSearchType(e.target.value)}
+          className="ml-2 border p-2 rounded"
+        >
+          <option value="default">Default</option>
+          <option value="teamID">Team ID</option>
+          <option value="presenter">Presenter</option>
+          <option value="paperTitle">Paper Title</option>
+        </select>
+      </div>
       {Object.keys(timetable).map((domain) => (
         <div key={domain} className="mb-6 border rounded-lg shadow-lg">
-          <div className="bg-blue-600 text-white p-3 cursor-pointer" onClick={() => toggleDomain(domain)}>
+          <div
+            className="bg-blue-600 text-white p-3 cursor-pointer"
+            onClick={() => toggleDomain(domain)}
+          >
             {domain} {expandedDomains[domain] ? "▲" : "▼"}
           </div>
           {expandedDomains[domain] &&
             timetable[domain].map((room, idx) => (
               <div key={idx} className="border-l pl-4">
-                <div className="bg-gray-500 text-white p-3 cursor-pointer" onClick={() => toggleRoom(room.room)}>
+                <div
+                  className="bg-gray-500 text-white p-3 cursor-pointer"
+                  onClick={() => toggleRoom(room.room)}
+                >
                   {room.room} {expandedRooms[room.room] ? "▲" : "▼"}
                 </div>
                 {expandedRooms[room.room] &&
                   room.schedule.map((session, sIdx) => (
-                    <div key={sIdx} className="p-2 border-b cursor-pointer hover:bg-gray-200" onClick={() => openModal(session)}>
-                      {session.time} - {session.paperTitle}
+                    <div
+                      key={sIdx}
+                      className={`p-2 border-b cursor-pointer hover:bg-gray-200 ${
+                        isCurrentSlot(session) ? "bg-green-200" : "bg-white"
+                      }`}
+                      onClick={() => openModal(session)}
+                    >
+                      <div className="font-semibold">
+                        {session.time} {/* Display start and finish time */}
+                      </div>
+                      <div>{session.paperTitle}</div>
                     </div>
                   ))}
               </div>
             ))}
         </div>
       ))}
-      <SheetModal isOpen={isModalOpen} onClose={closeModal} session={selectedSession} />
+      <SheetModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        session={selectedSession}
+      />
     </div>
   );
 };
 
 export default ExcelUploader;
-
-
-
