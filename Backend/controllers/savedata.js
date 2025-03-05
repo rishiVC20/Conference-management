@@ -12,7 +12,8 @@ const insertData = async () => {
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
     for (const row of data) {
-        const { Domain, Name, Presentors, contact, email, synopsis, preferedday } = row;
+        let { Domain, Name, Presentors, contact, email, synopsis, preferedday } = row;
+        Domain = Domain.toUpperCase();
 
         const emails = email.split(",").map(e => e.trim().toLowerCase());
         const names = Presentors.split(",").map(n => n.trim());
