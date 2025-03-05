@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter');  // Import the new counter model
+
 const paperSchema = new mongoose.Schema({
     paperId: {
         type: String,
@@ -17,21 +19,25 @@ const paperSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    prefered_date : {
+    prefered_date: {  // make sure it's the correct field name in schema and Excel import
         type: Date,
     }
 }, { timestamps: true });
 
-paperSchema.index({ paperName: 1, domain: 1, presentors: 1 }, { unique: true });
-
+// Use per-domain counter to generate unique paperId
 paperSchema.pre('save', async function(next) {
     if (!this.paperId) {
-        const count = await mongoose.model('Paper').countDocuments({ domain: this.domain }) + 1;
-        this.paperId = `${this.domain.toUpperCase()}${String(count).padStart(3, '0')}`;
+        const counter = await Counter.findOneAndUpdate(
+            { domain: this.domain },
+            { $inc: { count: 1 } },
+            { upsert: true, new: true }
+        );
+        this.paperId = `${this.domain.toUpperCase()}${String(counter.count).padStart(3, '0')}`;
     }
     next();
 });
 
+// ✅ Prevent OverwriteModelError
+const Paper = mongoose.models.Paper || mongoose.model('Paper', paperSchema);
 
-const Paper = mongoose.model('Paper', paperSchema);
 module.exports = Paper;
