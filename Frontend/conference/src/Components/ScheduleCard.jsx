@@ -59,39 +59,40 @@
 
 import React, { useState } from "react";
 
-const ScheduleCard = ({ slot }) => {
+const ScheduleCard = ({ slot, currentTime }) => {
   const { time, teamID, presenter, paperTitle, synopsis, day, domain, presentorDetails } = slot;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
+  // Check if the slot time matches the current time
+  const isCurrentSlot = time === currentTime;
+
   return (
     <>
-      <div
-        className="p-3 border border-gray-200 rounded-md bg-gray-50 cursor-pointer hover:bg-gray-100"
+      {/* Table Row with Conditional Styling */}
+      <tr
+        className={`hover:bg-gray-100 cursor-pointer ${
+          isCurrentSlot ? "bg-green-100" : ""
+        }`}
         onClick={openModal}
       >
-        <table className="w-full border-collapse border border-gray-300 text-sm">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="p-2 border border-gray-300">Time</th>
-              <th className="p-2 border border-gray-300">Team ID</th>
-              <th className="p-2 border border-gray-300">Presenter</th>
-              <th className="p-2 border border-gray-300">Paper Title</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="text-center">
-              <td className="p-2 border border-gray-300">{time}</td>
-              <td className="p-2 border border-gray-300">{teamID}</td>
-              <td className="p-2 border border-gray-300">{presenter}</td>
-              <td className="p-2 border border-gray-300">{paperTitle}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+        <td className="p-3 border border-gray-300">{time}</td>
+        <td className="p-3 border border-gray-300">{teamID}</td>
+        <td className="p-3 border border-gray-300">{presenter}</td>
+        <td className="p-3 border border-gray-300">{paperTitle}</td>
+        <td className="p-3 border border-gray-300">
+          <button
+            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+            onClick={openModal}
+          >
+            View Details
+          </button>
+        </td>
+      </tr>
 
+      {/* Modal for Additional Details */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-3/4">
@@ -99,30 +100,30 @@ const ScheduleCard = ({ slot }) => {
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-200">
-                  <th className="p-2 border border-gray-300">Domain</th>
-                  <th className="p-2 border border-gray-300">Team ID</th>
-                  <th className="p-2 border border-gray-300">Paper Title</th>
-                  <th className="p-2 border border-gray-300">Day</th>
-                  <th className="p-2 border border-gray-300">Time Slot</th>
-                  <th className="p-2 border border-gray-300">Presenters</th>
-                  <th className="p-2 border border-gray-300">Synopsis</th>
+                  <th className="p-3 border border-gray-300 text-left">Domain</th>
+                  <th className="p-3 border border-gray-300 text-left">Team ID</th>
+                  <th className="p-3 border border-gray-300 text-left">Paper Title</th>
+                  <th className="p-3 border border-gray-300 text-left">Day</th>
+                  <th className="p-3 border border-gray-300 text-left">Time Slot</th>
+                  <th className="p-3 border border-gray-300 text-left">Presenters</th>
+                  <th className="p-3 border border-gray-300 text-left">Synopsis</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="text-center">
-                  <td className="p-2 border border-gray-300">{domain}</td>
-                  <td className="p-2 border border-gray-300">{teamID}</td>
-                  <td className="p-2 border border-gray-300">{paperTitle}</td>
-                  <td className="p-2 border border-gray-300">Day {day}</td>
-                  <td className="p-2 border border-gray-300">{time}</td>
-                  <td className="p-2 border border-gray-300">
+                <tr>
+                  <td className="p-3 border border-gray-300">{domain}</td>
+                  <td className="p-3 border border-gray-300">{teamID}</td>
+                  <td className="p-3 border border-gray-300">{paperTitle}</td>
+                  <td className="p-3 border border-gray-300">Day {day}</td>
+                  <td className="p-3 border border-gray-300">{time}</td>
+                  <td className="p-3 border border-gray-300">
                     <ul className="list-disc list-inside">
                       {presentorDetails.map((p, index) => (
                         <li key={index}>{p.name} - {p.email} - {p.phoneNumber}</li>
                       ))}
                     </ul>
                   </td>
-                  <td className="p-2 border border-gray-300">{synopsis}</td>
+                  <td className="p-3 border border-gray-300">{synopsis}</td>
                 </tr>
               </tbody>
             </table>
