@@ -1,46 +1,50 @@
 const mongoose = require('mongoose');
 
 const paperSchema = new mongoose.Schema({
-  domain: {
-    type: String,
-    required: true,
-    enum: ['AI', 'ML', 'CLOUD', 'CYBERSEC', 'IOT']
-  },
   title: {
     type: String,
     required: true
   },
-  presenters: [{
-    name: String,
-    email: String,
-    contact: String
-  }],
+  domain: {
+    type: String,
+    required: true
+  },
+  paperId: {
+    type: String,
+    required: true,
+    unique: true
+  },
   synopsis: {
     type: String,
     required: true
   },
-  preferredDay: {
-    type: Date,
-    required: true
+  presenters: [{
+    name: {
+      type: String,
+      required: true
+    },
+    email: {
+      type: String,
+      required: true
+    },
+    phone: {
+      type: String,
+      required: true
+    }
+  }],
+  selectedSlot: {
+    date: Date,
+    room: String,
+    timeSlot: String,
+    bookedBy: String
   },
-  // Slot allocation fields
-  room: {
-    type: Number,
-    default: null
-  },
-  timeSlot: {
-    type: String,
-    default: null
-  },
-  day: {
-    type: Number,
-    default: null
-  },
-  teamId: {
-    type: String,
-    required: true,
-    unique: true
+  isSlotAllocated: {
+    type: Boolean,
+    default: false
   }
-});
+}, { timestamps: true, collection: 'papers' });
+
+// Add index for efficient querying
+paperSchema.index({ domain: 1, room: 1, timeSlot: 1 });
 
 module.exports = mongoose.model('Paper', paperSchema); 
