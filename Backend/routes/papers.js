@@ -6,23 +6,22 @@ const path = require('path');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const XLSX = require('xlsx');
+const PaperController = require('../controllers/paperController');
 
 // Constants
-const PAPERS_PER_ROOM = 12;  // Maximum number of papers per room
-const MAX_ROOMS_PER_DOMAIN = 10;  // Maximum rooms allowed for a single domain
+const PAPERS_PER_ROOM = 12;
+const MAX_ROOMS_PER_DOMAIN = 10;
 const ALLOWED_DATES = [
   '2026-01-09',
   '2026-01-10',
   '2026-01-11'
 ];
 
-// Calculate rooms needed for a domain
 const calculateRoomsForDomain = (paperCount) => {
   const roomsNeeded = Math.ceil(paperCount / PAPERS_PER_ROOM);
   return Math.min(roomsNeeded, MAX_ROOMS_PER_DOMAIN);
 };
 
-// Import papers from Excel
 router.post('/import', async (req, res) => {
   try {
     const excelPath = path.join(__dirname, '../data/data.xlsx');
@@ -33,7 +32,6 @@ router.post('/import', async (req, res) => {
   }
 });
 
-// Get all papers grouped by domain
 router.get('/', async (req, res) => {
   try {
     const papers = await Paper.find();
@@ -54,7 +52,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get available slots for a specific date and domain
 router.get('/available-slots', async (req, res) => {
   try {
     const { domain, date } = req.query;
@@ -62,7 +59,6 @@ router.get('/available-slots', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Domain and date are required' });
     }
 
-    // Check if date is allowed
     if (!ALLOWED_DATES.includes(date.split('T')[0])) {
       return res.status(400).json({ 
         success: false, 
@@ -70,11 +66,9 @@ router.get('/available-slots', async (req, res) => {
       });
     }
 
-    // Count total papers in the domain
     const totalPapers = await Paper.countDocuments({ domain });
     const roomsNeeded = calculateRoomsForDomain(totalPapers);
 
-    // Get occupied slots for the specified date
     const occupiedSlots = await Paper.find({
       domain,
       'selectedSlot.date': new Date(date),
@@ -82,12 +76,10 @@ router.get('/available-slots', async (req, res) => {
       'selectedSlot.timeSlot': { $ne: '' }
     }).select('selectedSlot');
 
-    // Generate available rooms
     const rooms = Array.from({ length: roomsNeeded }, (_, i) => 
       generateRoomName(domain, i + 1)
     );
 
-    // Create availability map
     const availableSlots = rooms.map(room => {
       const occupiedTimeSlotsForRoom = occupiedSlots
         .filter(paper => paper.selectedSlot.room === room)
@@ -101,7 +93,7 @@ router.get('/available-slots', async (req, res) => {
         room,
         timeSlots: availableTimeSlots
       };
-    }).filter(slot => slot.timeSlots.length > 0); // Only include rooms with available slots
+    }).filter(slot => slot.timeSlots.length > 0);
 
     res.json({
       success: true,
@@ -116,7 +108,6 @@ router.get('/available-slots', async (req, res) => {
   }
 });
 
-// Get papers by date
 router.get('/by-date', async (req, res) => {
   try {
     const { date } = req.query;
@@ -126,7 +117,7 @@ router.get('/by-date', async (req, res) => {
 
     const startDate = new Date(date);
     startDate.setHours(0, 0, 0, 0);
-    
+
     const endDate = new Date(date);
     endDate.setHours(23, 59, 59, 999);
 
@@ -142,7 +133,6 @@ router.get('/by-date', async (req, res) => {
       'selectedSlot.room': 1
     });
 
-    // Group papers by time slot
     const papersByTimeSlot = papers.reduce((acc, paper) => {
       const timeSlot = paper.selectedSlot.timeSlot;
       if (!acc[timeSlot]) {
@@ -161,7 +151,6 @@ router.get('/by-date', async (req, res) => {
   }
 });
 
-// Get papers for a specific presenter
 router.get('/presenter', async (req, res) => {
   try {
     const { email } = req.query;
@@ -186,98 +175,9 @@ router.get('/presenter', async (req, res) => {
   }
 });
 
-// Select a slot
-router.post('/select-slot', async (req, res) => {
-  try {
-    const { paperId, date, room, timeSlot, presenterEmail } = req.body;
+// ✅ Updated to use atomic controller method
+router.post('/select-slot', PaperController.selectSlot);
 
-    if (!paperId || !date || !room || !timeSlot || !presenterEmail) {
-      return res.status(400).json({
-        success: false,
-        message: 'Paper ID, date, room, time slot, and presenter email are required'
-      });
-    }
-
-    // Check if date is allowed
-    if (!ALLOWED_DATES.includes(new Date(date).toISOString().split('T')[0])) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Selected date is not available. Please choose from January 9-11, 2026' 
-      });
-    }
-
-    // Find the paper and verify presenter
-    const paper = await Paper.findById(paperId);
-    if (!paper) {
-      return res.status(404).json({
-        success: false,
-        message: 'Paper not found'
-      });
-    }
-
-    // Verify that the presenter is authorized for this paper
-    const isAuthorizedPresenter = paper.presenters.some(p => p.email === presenterEmail);
-    if (!isAuthorizedPresenter) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized: Presenter email does not match paper'
-      });
-    }
-
-    // Check if slot is already booked by another presenter
-    if (paper.selectedSlot && paper.selectedSlot.bookedBy && paper.selectedSlot.bookedBy !== presenterEmail) {
-      const bookedByPresenter = paper.presenters.find(p => p.email === paper.selectedSlot.bookedBy);
-      return res.status(400).json({
-        success: false,
-        message: `This slot has already been booked by ${bookedByPresenter?.name || 'another presenter'}`
-      });
-    }
-
-    // Check if slot is already taken by another paper
-    const existingSlot = await Paper.findOne({
-      _id: { $ne: paperId },
-      domain: paper.domain,
-      'selectedSlot.date': new Date(date),
-      'selectedSlot.room': room,
-      'selectedSlot.timeSlot': timeSlot
-    });
-
-    if (existingSlot) {
-      return res.status(400).json({
-        success: false,
-        message: 'This slot is already taken'
-      });
-    }
-
-    // Update paper with selected slot
-    const updatedPaper = await Paper.findByIdAndUpdate(
-      paperId,
-      {
-        selectedSlot: {
-          date: new Date(date),
-          room,
-          timeSlot,
-          bookedBy: presenterEmail
-        },
-        isSlotAllocated: true
-      },
-      { new: true }
-    );
-
-    res.json({
-      success: true,
-      data: updatedPaper
-    });
-  } catch (error) {
-    console.error('Error selecting slot:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Get paper details by ID
 router.get('/:id', async (req, res) => {
   try {
     const paper = await Paper.findById(req.params.id);
@@ -290,7 +190,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Add new endpoint for cleaning up duplicates
 router.post('/cleanup-duplicates', async (req, res) => {
   try {
     const result = await cleanupExistingDuplicates();
@@ -301,4 +200,4 @@ router.post('/cleanup-duplicates', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

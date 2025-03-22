@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+require('dotenv').config();
+
+
 const config = require('./config/config');
 const authRoutes = require('./routes/authRoutes');
 const paperRoutes = require('./routes/papers');
@@ -32,6 +35,9 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ success: false, message: 'Something went wrong!' });
 });
+
+console.log('Sending email using:', process.env.MAIL_USER);
+
 
 const PORT = config.port;
 app.listen(PORT, () => {
