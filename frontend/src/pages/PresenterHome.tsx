@@ -16,7 +16,7 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  Paper as MuiPaper,
+  Paper,
   Chip,
   IconButton,
   InputAdornment,
@@ -26,7 +26,14 @@ import {
   useTheme,
   AppBar,
   Toolbar,
-  SelectChangeEvent
+  SelectChangeEvent,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  tableCellClasses,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -46,8 +53,10 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
-import { Paper, Presenter } from '../types/paper';
 import { Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import { styled, Theme } from '@mui/material/styles';
+import { alpha } from '@mui/material/styles';
+import { Paper as PaperType, Presenter } from '../types/paper';
 
 interface AvailableSlot {
   room: string;
@@ -61,6 +70,51 @@ const ALLOWED_DATES = [
 ];
 
 type SearchCriteria = 'default' | 'paperId' | 'title' | 'presenter';
+
+// Add styled components for the table
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  [`&.${tableCellClasses.head}`]: {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.common.white,
+    fontWeight: 600,
+  },
+  [`&.${tableCellClasses.body}`]: {
+    fontSize: 14,
+  },
+}));
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  '&:nth-of-type(odd)': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+  },
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+  },
+  // hide last border
+  '&:last-child td, &:last-child th': {
+    border: 0,
+  },
+}));
+
+interface Paper {
+  _id: string;
+  title: string;
+  domain: string;
+  paperId: string;
+  presenters: Array<{
+    name: string;
+    email: string;
+    phone: string;
+  }>;
+  synopsis: string;
+  selectedSlot?: {
+    date: string;
+    room: string;
+    timeSlot: string;
+    bookedBy?: string;
+  };
+  presentationStatus: 'Scheduled' | 'In Progress' | 'Presented' | 'Cancelled';
+}
 
 const PresenterHome = () => {
   const theme = useTheme();
@@ -317,6 +371,46 @@ const PresenterHome = () => {
     }
   };
 
+  // Add status color functions
+  const getStatusColor = (status: Paper['presentationStatus'], theme: Theme) => {
+    switch (status) {
+      case 'Presented':
+        return theme.palette.success.main;
+      case 'In Progress':
+        return theme.palette.warning.main;
+      case 'Cancelled':
+        return theme.palette.error.main;
+      default:
+        return theme.palette.info.main;
+    }
+  };
+
+  const getStatusBgColor = (status: Paper['presentationStatus'], theme: Theme) => {
+    switch (status) {
+      case 'Presented':
+        return alpha(theme.palette.success.main, 0.05);
+      case 'In Progress':
+        return alpha(theme.palette.warning.main, 0.05);
+      case 'Cancelled':
+        return alpha(theme.palette.error.main, 0.05);
+      default:
+        return alpha(theme.palette.info.main, 0.05);
+    }
+  };
+
+  const getStatusBgHoverColor = (status: Paper['presentationStatus'], theme: Theme) => {
+    switch (status) {
+      case 'Presented':
+        return alpha(theme.palette.success.main, 0.08);
+      case 'In Progress':
+        return alpha(theme.palette.warning.main, 0.08);
+      case 'Cancelled':
+        return alpha(theme.palette.error.main, 0.08);
+      default:
+        return alpha(theme.palette.info.main, 0.08);
+    }
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -357,7 +451,7 @@ const PresenterHome = () => {
         )}
 
         {papers.length === 0 ? (
-          <MuiPaper 
+          <Paper 
             elevation={0} 
             sx={{ 
               p: 4, 
@@ -373,7 +467,7 @@ const PresenterHome = () => {
             <Typography color="textSecondary">
               You haven't submitted any papers yet.
             </Typography>
-          </MuiPaper>
+          </Paper>
         ) : (
           <Grid container spacing={3}>
             {papers.map((paper) => (
@@ -581,99 +675,109 @@ const PresenterHome = () => {
                     />
                   </Box>
                 </AccordionSummary>
-                <AccordionDetails sx={{ p: 0 }}>
-                  {Object.entries(rooms).map(([room, papers]) => (
+                <AccordionDetails sx={{ p: 2 }}>
+                  {Object.entries(rooms).map(([room, roomPapers]) => (
                     <Accordion
                       key={`${domain}-${room}`}
                       expanded={expandedRooms[`${domain}-${room}`] || false}
-                      onChange={(event, isExpanded) => handleAccordionRoomChange(`${domain}-${room}`)(event, isExpanded)}
-                      disableGutters
+                      onChange={handleAccordionRoomChange(`${domain}-${room}`)}
                       sx={{
+                        mb: 2,
                         '&:before': { display: 'none' },
-                        boxShadow: 'none',
-                        borderTop: 1,
-                        borderColor: 'divider',
-                        '&:first-of-type': {
-                          borderTop: 0
-                        }
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        border: 1,
+                        borderColor: 'divider'
                       }}
                     >
                       <AccordionSummary
                         expandIcon={<ExpandMoreIcon />}
                         sx={{
-                          backgroundColor: theme.palette.grey[50],
+                          backgroundColor: alpha(theme.palette.primary.main, 0.05),
                           '&:hover': {
-                            backgroundColor: theme.palette.grey[100]
+                            backgroundColor: alpha(theme.palette.primary.main, 0.08)
                           }
                         }}
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <RoomIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                          <Typography variant="subtitle1" color="primary">
-                            Room {room}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <RoomIcon color="primary" />
+                          <Typography variant="h6">
+                            {room}
                           </Typography>
-                          <Chip
-                            size="small"
-                            label={`${papers.length} Presentations`}
+                          <Chip 
+                            label={`${roomPapers.length} Presentations`} 
+                            size="small" 
                             sx={{ ml: 2 }}
                           />
                         </Box>
                       </AccordionSummary>
                       <AccordionDetails sx={{ p: 2 }}>
-                        <Grid container spacing={2}>
-                          {papers
-                            .sort((a, b) => 
-                              (a.selectedSlot?.timeSlot || '').localeCompare(b.selectedSlot?.timeSlot || '')
-                            )
-                            .map((paper) => (
-                              <Grid item xs={12} key={paper._id}>
-                                <Card elevation={0} sx={{ 
-                                  border: 1, 
-                                  borderColor: 'divider'
-                                }}>
-                                  <CardContent>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                      <Box>
-                                        <Typography variant="h6" gutterBottom>
-                                          {paper.title}
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                          <Chip
-                                            size="small"
-                                            icon={<ScheduleIcon />}
-                                            label={paper.selectedSlot?.timeSlot}
-                                            color="primary"
-                                          />
-                                          <Chip
-                                            size="small"
-                                            icon={<PersonIcon />}
-                                            label={paper.presenters[0]?.name || 'No presenter'}
-                                          />
-                                          <Chip
-                                            size="small"
-                                            icon={<AssignmentIcon />}
-                                            label={`Paper ID: ${paper.paperId}`}
-                                            color="secondary"
-                                          />
-                                        </Box>
+                        <TableContainer>
+                          <Table size="medium" aria-label="presentation schedule">
+                            <TableHead>
+                              <TableRow>
+                                <StyledTableCell>Time Slot</StyledTableCell>
+                                <StyledTableCell>Paper ID</StyledTableCell>
+                                <StyledTableCell>Title</StyledTableCell>
+                                <StyledTableCell>Presenters</StyledTableCell>
+                                <StyledTableCell>Status</StyledTableCell>
+                                <StyledTableCell align="right">Actions</StyledTableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {roomPapers
+                                .sort((a, b) => (a.selectedSlot?.timeSlot || '').localeCompare(b.selectedSlot?.timeSlot || ''))
+                                .map((paper) => (
+                                  <StyledTableRow key={paper._id}>
+                                    <StyledTableCell>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <ScheduleIcon fontSize="small" color="action" />
+                                        {paper.selectedSlot?.timeSlot}
                                       </Box>
+                                    </StyledTableCell>
+                                    <StyledTableCell>{paper.paperId}</StyledTableCell>
+                                    <StyledTableCell>{paper.title}</StyledTableCell>
+                                    <StyledTableCell>
+                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        {paper.presenters.map((presenter, index) => (
+                                          <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <PersonIcon fontSize="small" color="action" />
+                                            {presenter.name}
+                                          </Box>
+                                        ))}
+                                      </Box>
+                                    </StyledTableCell>
+                                    <StyledTableCell>
+                                      <Chip
+                                        label={paper.presentationStatus}
+                                        size="small"
+                                        sx={{
+                                          color: getStatusColor(paper.presentationStatus, theme),
+                                          bgcolor: getStatusBgColor(paper.presentationStatus, theme),
+                                          '&:hover': {
+                                            bgcolor: getStatusBgHoverColor(paper.presentationStatus, theme)
+                                          }
+                                        }}
+                                      />
+                                    </StyledTableCell>
+                                    <StyledTableCell align="right">
                                       <Button
                                         variant="outlined"
                                         size="small"
-                                        onClick={() => handleViewDetails(paper)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleViewDetails(paper);
+                                        }}
                                         startIcon={<EventIcon />}
                                       >
                                         View Details
                                       </Button>
-                                    </Box>
-                                    <Typography variant="body2" color="textSecondary">
-                                      {paper.synopsis.substring(0, 150)}...
-                                    </Typography>
-                                  </CardContent>
-                                </Card>
-                              </Grid>
-                            ))}
-                        </Grid>
+                                    </StyledTableCell>
+                                  </StyledTableRow>
+                                ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
                       </AccordionDetails>
                     </Accordion>
                   ))}

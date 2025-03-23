@@ -200,4 +200,31 @@ router.post('/cleanup-duplicates', async (req, res) => {
   }
 });
 
+router.patch('/:id/presentation-status', async (req, res) => {
+  try {
+    const { presentationStatus } = req.body;
+    if (!presentationStatus) {
+      return res.status(400).json({ success: false, message: 'Presentation status is required' });
+    }
+
+    const paper = await Paper.findByIdAndUpdate(
+      req.params.id,
+      { presentationStatus },
+      { new: true }
+    );
+
+    if (!paper) {
+      return res.status(404).json({ success: false, message: 'Paper not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Presentation status updated successfully',
+      data: paper
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;

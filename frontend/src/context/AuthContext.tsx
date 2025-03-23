@@ -45,10 +45,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const cancelTokenRef = useRef<CancelTokenSource | null>(null);
-  const initialCheckDoneRef = useRef(false);
 
   const checkAuth = useCallback(async () => {
-    if (isAuthChecking || !initialCheckDoneRef.current) return;
+    if (isAuthChecking) return;
 
     // Cancel any previous request
     if (cancelTokenRef.current) {
@@ -96,11 +95,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Perform initial auth check only once
-    if (!initialCheckDoneRef.current) {
-      initialCheckDoneRef.current = true;
-      setIsAuthChecking(true);
-      checkAuth();
-    }
+    setIsAuthChecking(true);
+    checkAuth();
 
     return () => {
       if (cancelTokenRef.current) {
@@ -166,7 +162,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setUser(null);
       setLoading(false);
-      initialCheckDoneRef.current = false; // Reset initial check on logout
       navigate('/login', { replace: true });
     }
   };

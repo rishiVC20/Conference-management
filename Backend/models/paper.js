@@ -41,6 +41,11 @@ const paperSchema = new mongoose.Schema({
   isSlotAllocated: {
     type: Boolean,
     default: false
+  },
+  presentationStatus: {
+    type: String,
+    enum: ['Scheduled', 'In Progress', 'Presented', 'Cancelled'],
+    default: 'Scheduled'
   }
 }, { timestamps: true, collection: 'papers' });
 

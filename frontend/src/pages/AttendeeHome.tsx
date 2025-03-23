@@ -30,7 +30,15 @@ import {
   SelectChangeEvent,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Tooltip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  tableCellClasses,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -42,12 +50,16 @@ import {
   Domain as DomainIcon,
   ExpandMore as ExpandMoreIcon,
   Close as CloseIcon,
-  Assignment as AssignmentIcon
+  Assignment as AssignmentIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  PlayArrow as PlayArrowIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
+import { alpha, styled, Theme } from '@mui/material/styles';
 
 interface Paper {
   _id: string;
@@ -66,6 +78,7 @@ interface Paper {
     timeSlot: string;
     bookedBy?: string;
   };
+  presentationStatus: 'Scheduled' | 'In Progress' | 'Presented' | 'Cancelled';
 }
 
 interface TimeSlot {
@@ -94,6 +107,31 @@ const ALLOWED_DATES = [
   '2026-01-10',
   '2026-01-11'
 ];
+
+// Add styled components for the table
+const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  [`&.${tableCellClasses.head}`]: {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.common.white,
+    fontWeight: 600,
+  },
+  [`&.${tableCellClasses.body}`]: {
+    fontSize: 14,
+  },
+}));
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  '&:nth-of-type(odd)': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.02),
+  },
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+  },
+  // hide last border
+  '&:last-child td, &:last-child th': {
+    border: 0,
+  },
+}));
 
 const AttendeeHome = () => {
   const theme = useTheme();
@@ -225,6 +263,58 @@ const AttendeeHome = () => {
   const handleCloseDetails = () => {
     setDetailsDialogOpen(false);
     setSelectedPaper(null);
+  };
+
+  const getStatusColor = (status: Paper['presentationStatus']) => {
+    switch (status) {
+      case 'Presented':
+        return theme.palette.success.main;
+      case 'In Progress':
+        return theme.palette.warning.main;
+      case 'Cancelled':
+        return theme.palette.error.main;
+      default:
+        return theme.palette.info.main;
+    }
+  };
+
+  const getStatusBgColor = (status: Paper['presentationStatus']) => {
+    switch (status) {
+      case 'Presented':
+        return alpha(theme.palette.success.main, 0.05);
+      case 'In Progress':
+        return alpha(theme.palette.warning.main, 0.05);
+      case 'Cancelled':
+        return alpha(theme.palette.error.main, 0.05);
+      default:
+        return alpha(theme.palette.info.main, 0.05);
+    }
+  };
+
+  const getStatusBgHoverColor = (status: Paper['presentationStatus']) => {
+    switch (status) {
+      case 'Presented':
+        return alpha(theme.palette.success.main, 0.08);
+      case 'In Progress':
+        return alpha(theme.palette.warning.main, 0.08);
+      case 'Cancelled':
+        return alpha(theme.palette.error.main, 0.08);
+      default:
+        return alpha(theme.palette.info.main, 0.08);
+    }
+  };
+
+  const getStatusIcon = (status: Paper['presentationStatus']) => {
+    switch (status) {
+      case 'Presented':
+        return <CheckCircleIcon />;
+      case 'In Progress':
+        return <PlayArrowIcon />;
+      case 'Cancelled':
+        return <CancelIcon />;
+      default:
+        return <ScheduleIcon />;
+    }
   };
 
   return (
@@ -369,93 +459,109 @@ const AttendeeHome = () => {
                   />
                 </Box>
               </AccordionSummary>
-              <AccordionDetails sx={{ p: 0 }}>
-                {Object.entries(rooms).map(([room, papers]) => (
+              <AccordionDetails sx={{ p: 2 }}>
+                {Object.entries(rooms).map(([room, roomPapers]) => (
                   <Accordion
                     key={`${domain}-${room}`}
                     expanded={expandedRooms[`${domain}-${room}`] || false}
                     onChange={handleRoomChange(`${domain}-${room}`)}
-                    disableGutters
                     sx={{
+                      mb: 2,
                       '&:before': { display: 'none' },
-                      boxShadow: 'none',
-                      borderTop: 1,
-                      borderColor: 'divider',
-                      '&:first-of-type': {
-                        borderTop: 0
-                      }
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      border: 1,
+                      borderColor: 'divider'
                     }}
                   >
                     <AccordionSummary
                       expandIcon={<ExpandMoreIcon />}
                       sx={{
-                        backgroundColor: theme.palette.grey[50],
+                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
                         '&:hover': {
-                          backgroundColor: theme.palette.grey[100]
+                          backgroundColor: alpha(theme.palette.primary.main, 0.08)
                         }
                       }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <RoomIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                        <Typography variant="subtitle1" color="primary">
-                          Room {room}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <RoomIcon color="primary" />
+                        <Typography variant="h6">
+                          {room}
                         </Typography>
-                        <Chip
-                          size="small"
-                          label={`${papers.length} Presentations`}
+                        <Chip 
+                          label={`${roomPapers.length} Presentations`} 
+                          size="small" 
                           sx={{ ml: 2 }}
                         />
                       </Box>
                     </AccordionSummary>
                     <AccordionDetails sx={{ p: 2 }}>
-                      <Grid container spacing={2}>
-                        {papers
-                          .sort((a, b) => 
-                            (a.selectedSlot?.timeSlot || '').localeCompare(b.selectedSlot?.timeSlot || '')
-                          )
-                          .map((paper) => (
-                            <Grid item xs={12} key={paper._id}>
-                              <Card elevation={0} sx={{ 
-                                border: 1, 
-                                borderColor: 'divider'
-                              }}>
-                                <CardContent>
-                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                    <Box>
-                                      <Typography variant="h6" gutterBottom>
-                                        {paper.title}
-                                      </Typography>
-                                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                        <Chip
-                                          size="small"
-                                          icon={<ScheduleIcon />}
-                                          label={paper.selectedSlot?.timeSlot}
-                                          color="primary"
-                                        />
-                                        <Chip
-                                          size="small"
-                                          icon={<PersonIcon />}
-                                          label={paper.presenters[0]?.name || 'No presenter'}
-                                        />
-                                      </Box>
+                      <TableContainer>
+                        <Table size="medium" aria-label="presentation schedule">
+                          <TableHead>
+                            <TableRow>
+                              <StyledTableCell>Time Slot</StyledTableCell>
+                              <StyledTableCell>Paper ID</StyledTableCell>
+                              <StyledTableCell>Title</StyledTableCell>
+                              <StyledTableCell>Presenters</StyledTableCell>
+                              <StyledTableCell>Status</StyledTableCell>
+                              <StyledTableCell align="right">Actions</StyledTableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {roomPapers
+                              .sort((a, b) => (a.selectedSlot?.timeSlot || '').localeCompare(b.selectedSlot?.timeSlot || ''))
+                              .map((paper) => (
+                                <StyledTableRow key={paper._id}>
+                                  <StyledTableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <ScheduleIcon fontSize="small" color="action" />
+                                      {paper.selectedSlot?.timeSlot}
                                     </Box>
+                                  </StyledTableCell>
+                                  <StyledTableCell>{paper.paperId}</StyledTableCell>
+                                  <StyledTableCell>{paper.title}</StyledTableCell>
+                                  <StyledTableCell>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                      {paper.presenters.map((presenter, index) => (
+                                        <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                          <PersonIcon fontSize="small" color="action" />
+                                          {presenter.name}
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  </StyledTableCell>
+                                  <StyledTableCell>
+                                    <Chip
+                                      label={paper.presentationStatus}
+                                      size="small"
+                                      sx={{
+                                        color: getStatusColor(paper.presentationStatus),
+                                        bgcolor: getStatusBgColor(paper.presentationStatus),
+                                        '&:hover': {
+                                          bgcolor: getStatusBgHoverColor(paper.presentationStatus)
+                                        }
+                                      }}
+                                    />
+                                  </StyledTableCell>
+                                  <StyledTableCell align="right">
                                     <Button
                                       variant="outlined"
                                       size="small"
-                                      onClick={() => handleViewDetails(paper)}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewDetails(paper);
+                                      }}
                                       startIcon={<EventIcon />}
                                     >
                                       View Details
                                     </Button>
-                                  </Box>
-                                  <Typography variant="body2" color="textSecondary">
-                                    {paper.synopsis.substring(0, 150)}...
-                                  </Typography>
-                                </CardContent>
-                              </Card>
-                            </Grid>
-                          ))}
-                      </Grid>
+                                  </StyledTableCell>
+                                </StyledTableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
                     </AccordionDetails>
                   </Accordion>
                 ))}

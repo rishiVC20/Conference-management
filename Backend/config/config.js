@@ -1,6 +1,6 @@
 const config = {
   mongodb: {
-    uri: process.env.MONGODB_URI || 'mongodb+srv://water11girl3:rishi123@cluster0.sxom3.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0'
+    uri: process.env.MONGODB_URI
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key',
@@ -24,7 +24,7 @@ const config = {
       }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
   },
   port: process.env.PORT || 5000
