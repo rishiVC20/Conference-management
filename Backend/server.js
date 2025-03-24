@@ -8,6 +8,8 @@ require('dotenv').config();
 const config = require('./config/config');
 const authRoutes = require('./routes/authRoutes');
 const paperRoutes = require('./routes/papers');
+const statsRoutes = require('./routes/statsRoutes');
+
 
 const app = express();
 
@@ -24,6 +26,8 @@ mongoose.connect(config.mongodb.uri)
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/papers', paperRoutes);
+
+app.use('/api/stats', statsRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
