@@ -7,6 +7,10 @@ import Register from './pages/Register';
 import PresenterHome from './pages/PresenterHome';
 import AttendeeHome from './pages/AttendeeHome';
 import AdminHome from './pages/AdminHome';
+import AdminDashboard from './pages/AdminDashboard';
+import ScheduleManager from './pages/ScheduleManager';
+import CommunicationCenter from './pages/CommunicationCenter';
+import PresenterManagement from './pages/PresenterManagement';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './context/AuthContext';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -73,6 +77,38 @@ const App: React.FC = () => {
                 element={
                   <PrivateRoute role="admin">
                     <AdminHome />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <PrivateRoute role="admin">
+                    <AdminDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/admin/schedule"
+                element={
+                  <PrivateRoute role="admin">
+                    <ScheduleManager />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/admin/communications"
+                element={
+                  <PrivateRoute role="admin">
+                    <CommunicationCenter />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/admin/presenters"
+                element={
+                  <PrivateRoute role="admin">
+                    <PresenterManagement />
                   </PrivateRoute>
                 }
               />

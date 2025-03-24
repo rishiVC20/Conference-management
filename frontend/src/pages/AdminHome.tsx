@@ -50,13 +50,17 @@ import {
   Assignment as AssignmentIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  PlayArrow as PlayArrowIcon
+  PlayArrow as PlayArrowIcon,
+  Dashboard as DashboardIcon,
+  Notifications as NotificationsIcon,
+  People as PeopleIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { styled, Theme } from '@mui/material/styles';
+import { Link } from 'react-router-dom';
 
 interface Paper {
   _id: string;
@@ -291,6 +295,33 @@ const AdminHome: React.FC = () => {
     }
   };
 
+  const adminFeatures = [
+    {
+      title: 'Analytics Dashboard',
+      description: 'View conference statistics and metrics',
+      icon: <DashboardIcon />,
+      path: '/admin/dashboard',
+    },
+    {
+      title: 'Schedule Manager',
+      description: 'Manage presentation schedules and time slots',
+      icon: <ScheduleIcon />,
+      path: '/admin/schedule',
+    },
+    {
+      title: 'Communication Center',
+      description: 'Send notifications and manage communications',
+      icon: <NotificationsIcon />,
+      path: '/admin/communications',
+    },
+    {
+      title: 'Presenter Management',
+      description: 'Manage presenters and track attendance',
+      icon: <PeopleIcon />,
+      path: '/admin/presenters',
+    },
+  ];
+
   return (
     <Box sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}>
       <AppBar position="static" elevation={1}>
@@ -315,6 +346,44 @@ const AdminHome: React.FC = () => {
             {error}
           </Alert>
         )}
+
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" gutterBottom>
+            Admin Dashboard
+          </Typography>
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {adminFeatures.map((feature) => (
+              <Grid item xs={12} sm={6} md={3} key={feature.title}>
+                <Paper
+                  component={Link}
+                  to={feature.path}
+                  sx={{
+                    p: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    transition: 'transform 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 4,
+                    },
+                  }}
+                >
+                  <Box sx={{ mb: 2, color: 'primary.main' }}>{feature.icon}</Box>
+                  <Typography variant="h6" gutterBottom>
+                    {feature.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {feature.description}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
 
         <Paper elevation={0} sx={{ p: 3, mb: 4, bgcolor: 'background.paper' }}>
           <Grid container spacing={3} alignItems="center">
@@ -403,7 +472,7 @@ const AdminHome: React.FC = () => {
                         <RoomIcon color="primary" />
                         <Typography variant="h6">
                           {room}
-                        </Typography>
+          </Typography>
                         <Chip 
                           label={`${roomPapers.length} Presentations`} 
                           size="small" 
@@ -574,7 +643,7 @@ const AdminHome: React.FC = () => {
               <DialogActions>
                 <Button onClick={handleCloseDetails}>
                   Close
-                </Button>
+        </Button>
               </DialogActions>
             </>
           )}

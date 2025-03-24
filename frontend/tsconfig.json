@@ -19,7 +19,13 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": "src"
+    "baseUrl": "src",
+    "types": [
+      "node",
+      "react",
+      "react-dom",
+      "react-beautiful-dnd"
+    ]
   },
   "include": [
     "src"

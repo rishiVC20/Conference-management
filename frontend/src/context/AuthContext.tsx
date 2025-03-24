@@ -42,12 +42,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthChecking, setIsAuthChecking] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const cancelTokenRef = useRef<CancelTokenSource | null>(null);
 
   const checkAuth = useCallback(async () => {
-    if (isAuthChecking) return;
+    // Skip auth check if we're registering or already checking
+    if (isAuthChecking || isRegistering) return;
+
+    // Skip auth check if we're on login or register page
+    if (['/login', '/register'].includes(location.pathname)) {
+      setLoading(false);
+      return;
+    }
+
+    setIsAuthChecking(true);
 
     // Cancel any previous request
     if (cancelTokenRef.current) {
@@ -66,13 +76,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const userData = response.data.data.user;
         setUser(userData);
         
-        // Only redirect if we're on the login/register/root page and have a valid user
-        if (['/login', '/register', '/'].includes(location.pathname) && userData.role) {
+        // Only redirect if we're on the root page and have a valid user
+        if (location.pathname === '/' && userData.role) {
           navigate(`/${userData.role.toLowerCase()}`, { replace: true });
         }
       } else {
         setUser(null);
-        // Only redirect to login if not already on login or register page
+        // Only redirect to login if not on login or register page
         if (!['/login', '/register'].includes(location.pathname)) {
           navigate('/login', { replace: true });
         }
@@ -82,7 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Auth check error:', error);
         setUser(null);
         
-        // Only redirect to login if not already on login or register page
+        // Only redirect to login if not on login or register page
         if (!['/login', '/register'].includes(location.pathname)) {
           navigate('/login', { replace: true });
         }
@@ -91,11 +101,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
       setIsAuthChecking(false);
     }
-  }, [navigate, location.pathname, isAuthChecking]);
+  }, [navigate, location.pathname, isAuthChecking, isRegistering]);
 
   useEffect(() => {
-    // Perform initial auth check only once
-    setIsAuthChecking(true);
     checkAuth();
 
     return () => {
@@ -116,6 +124,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (response.data.success) {
         const userData = response.data.data.user;
         setUser(userData);
+        navigate(`/${userData.role.toLowerCase()}`, { replace: true });
         return userData;
       }
       throw new Error(response.data.message || 'Login failed');
@@ -126,6 +135,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const register = async (username: string, email: string, password: string, role: 'presenter' | 'attendee') => {
+    setIsRegistering(true);
     setLoading(true);
     try {
       const response = await axiosInstance.post('/auth/register', {
@@ -150,6 +160,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       throw new Error(error.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
+      setIsRegistering(false);
     }
   };
 

@@ -1,6 +1,6 @@
 const config = {
   mongodb: {
-    uri: process.env.MONGODB_URI
+    uri: process.env.MONGODB_URI || 'mongodb+srv://rishivc26:ZvsfEZCA4xNAaVED@cluster0.zpc5y.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key',
