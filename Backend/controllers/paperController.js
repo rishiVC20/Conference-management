@@ -2,6 +2,8 @@ const Paper = require('../models/Paper');
 const XLSX = require('xlsx');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
+const { generateTeamId } = require('../utils/excelImporter');
+
 
 
 const generatePaperId = (domain, count) => {
@@ -188,7 +190,49 @@ const selectSlot = async (req, res) => {
   }
 };
 
+const adminAddPaper = async (req, res) => {
+  try {
+    const { title, domain, synopsis, presenters } = req.body;
+
+    // Basic validation
+    if (!title || !domain || !synopsis || !Array.isArray(presenters) || presenters.length === 0) {
+      return res.status(400).json({ success: false, message: 'All fields are required including at least one presenter.' });
+    }
+
+    // Count existing papers in the domain to generate teamId
+    const count = await Paper.countDocuments({ domain });
+    const teamId = generateTeamId(domain, count);
+
+    const newPaper = new Paper({
+      title,
+      domain,
+      synopsis,
+      paperId: teamId,
+      teamId: teamId,
+      presenters,
+      selectedSlot: {
+        date: null,
+        room: '',
+        timeSlot: '',
+        bookedBy: '',
+        isSlotAllocated: false
+      },
+      presentationStatus: 'Scheduled'
+    });
+
+    await newPaper.save();
+
+    res.status(201).json({ success: true, message: 'Paper added successfully', data: newPaper });
+
+  } catch (error) {
+    console.error('Error adding paper:', error);
+    res.status(500).json({ success: false, message: 'Error adding paper', error: error.message });
+  }
+};
+
+
 module.exports = {
   importPapers,
-  selectSlot
+  selectSlot,
+  adminAddPaper
 };

@@ -7,6 +7,8 @@ const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const XLSX = require('xlsx');
 const PaperController = require('../controllers/paperController');
+const { adminAddPaper } = require('../controllers/paperController');
+const { protect, authorize } = require('../middleware/auth');
 
 // Constants
 const PAPERS_PER_ROOM = 12;
@@ -17,10 +19,16 @@ const ALLOWED_DATES = [
   '2026-01-11'
 ];
 
-const calculateRoomsForDomain = (paperCount) => {
-  const roomsNeeded = Math.ceil(paperCount / PAPERS_PER_ROOM);
+const CONFERENCE_DAYS = 3;
+
+const calculateRoomsPerDay = (paperCount) => {
+  const papersPerDay = Math.ceil(paperCount / CONFERENCE_DAYS);
+  const roomsNeeded = Math.ceil(papersPerDay / PAPERS_PER_ROOM);
   return Math.min(roomsNeeded, MAX_ROOMS_PER_DOMAIN);
 };
+
+
+router.post('/admin-add', protect, authorize('admin'), adminAddPaper);
 
 router.post('/import', async (req, res) => {
   try {
@@ -67,7 +75,7 @@ router.get('/available-slots', async (req, res) => {
     }
 
     const totalPapers = await Paper.countDocuments({ domain });
-    const roomsNeeded = calculateRoomsForDomain(totalPapers);
+    const roomsNeeded = calculateRoomsPerDay(totalPapers);
 
     const occupiedSlots = await Paper.find({
       domain,

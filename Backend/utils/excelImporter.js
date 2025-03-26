@@ -184,4 +184,4 @@ const processExcelData = async (filePath) => {
   }
 };
 
-module.exports = { processExcelData, generateRoomName, TIME_SLOTS }; 
+module.exports = { processExcelData, generateRoomName, TIME_SLOTS, generateTeamId }; 
