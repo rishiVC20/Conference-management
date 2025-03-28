@@ -81,7 +81,7 @@ router.get('/available-slots', async (req, res) => {
       domain,
       'selectedSlot.date': new Date(date),
       'selectedSlot.room': { $ne: '' },
-      'selectedSlot.timeSlot': { $ne: '' }
+      'selectedSlot.session': { $ne: '' }
     }).select('selectedSlot');
 
     const rooms = Array.from({ length: roomsNeeded }, (_, i) => 
@@ -91,7 +91,7 @@ router.get('/available-slots', async (req, res) => {
     const availableSlots = rooms.map(room => {
       const occupiedTimeSlotsForRoom = occupiedSlots
         .filter(paper => paper.selectedSlot.room === room)
-        .map(paper => paper.selectedSlot.timeSlot);
+        .map(paper => paper.selectedSlot.session);
 
       const availableTimeSlots = TIME_SLOTS.filter(
         slot => !occupiedTimeSlotsForRoom.includes(slot)

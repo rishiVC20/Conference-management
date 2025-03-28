@@ -35,7 +35,7 @@ const paperSchema = new mongoose.Schema({
   selectedSlot: {
     date: Date,
     room: String,
-    timeSlot: String,
+    session: String,
     bookedBy: String
   },
   isSlotAllocated: {
@@ -50,6 +50,6 @@ const paperSchema = new mongoose.Schema({
 }, { timestamps: true, collection: 'papers' });
 
 // Add index for efficient querying
-paperSchema.index({ domain: 1, room: 1, timeSlot: 1 });
+paperSchema.index({ domain: 1, room: 1, session: 1 });
 
 module.exports = mongoose.model('Paper', paperSchema); 

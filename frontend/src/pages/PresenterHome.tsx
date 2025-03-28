@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import axios from '../config/axios';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import axios from "../config/axios";
 import {
   Container,
   Typography,
@@ -34,7 +34,7 @@ import {
   TableHead,
   TableRow,
   tableCellClasses,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Search as SearchIcon,
   Event as EventIcon,
@@ -46,30 +46,26 @@ import {
   Domain as DomainIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
-  ExpandMore as ExpandMoreIcon
-} from '@mui/icons-material';
-import PaperDetails from '../components/PaperDetails';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format } from 'date-fns';
-import { Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
-import { styled, Theme } from '@mui/material/styles';
-import { alpha } from '@mui/material/styles';
-import { Paper as PaperType, Presenter } from '../types/paper';
+  ExpandMore as ExpandMoreIcon,
+} from "@mui/icons-material";
+import PaperDetails from "../components/PaperDetails";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { format } from "date-fns";
+import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import { styled, Theme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
+import { Paper as PaperType, Presenter } from "../types/paper";
 
 interface AvailableSlot {
   room: string;
   timeSlots: string[];
 }
 
-const ALLOWED_DATES = [
-  '2026-01-09',
-  '2026-01-10',
-  '2026-01-11'
-];
+const ALLOWED_DATES = ["2026-01-09", "2026-01-10", "2026-01-11"];
 
-type SearchCriteria = 'default' | 'paperId' | 'title' | 'presenter';
+type SearchCriteria = "default" | "paperId" | "title" | "presenter";
 
 // Add styled components for the table
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -84,14 +80,14 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  '&:nth-of-type(odd)': {
+  "&:nth-of-type(odd)": {
     backgroundColor: alpha(theme.palette.primary.main, 0.02),
   },
-  '&:hover': {
+  "&:hover": {
     backgroundColor: alpha(theme.palette.primary.main, 0.04),
   },
   // hide last border
-  '&:last-child td, &:last-child th': {
+  "&:last-child td, &:last-child th": {
     border: 0,
   },
 }));
@@ -113,7 +109,7 @@ interface Paper {
     timeSlot: string;
     bookedBy?: string;
   };
-  presentationStatus: 'Scheduled' | 'In Progress' | 'Presented' | 'Cancelled';
+  presentationStatus: "Scheduled" | "In Progress" | "Presented" | "Cancelled";
 }
 
 const PresenterHome = () => {
@@ -122,21 +118,25 @@ const PresenterHome = () => {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDomain, setSelectedDomain] = useState('All');
+  const [selectedDomain, setSelectedDomain] = useState("All");
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [slotSelectionOpen, setSlotSelectionOpen] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState<string>('');
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
+  const [selectedRoom, setSelectedRoom] = useState<string>("");
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [slotError, setSlotError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [scheduledPapers, setScheduledPapers] = useState<Paper[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>('default');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSession, setSelectedSession] = useState("");
+  const [searchCriteria, setSearchCriteria] =
+    useState<SearchCriteria>("default");
   const [expandedDomain, setExpandedDomain] = useState<string | false>(false);
-  const [expandedRooms, setExpandedRooms] = useState<{ [key: string]: boolean }>({});
+  const [expandedRooms, setExpandedRooms] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleViewDate, setScheduleViewDate] = useState<Date | null>(null);
 
@@ -146,12 +146,12 @@ const PresenterHome = () => {
 
   useEffect(() => {
     // Check if any paper has a booked slot
-    const hasBookedSlot = papers.some(paper => paper.selectedSlot?.bookedBy);
+    const hasBookedSlot = papers.some((paper) => paper.selectedSlot?.bookedBy);
     setShowSchedule(hasBookedSlot);
-    
+
     if (hasBookedSlot) {
       // Set initial schedule view date to the first booked paper's date
-      const bookedPaper = papers.find(p => p.selectedSlot?.bookedBy);
+      const bookedPaper = papers.find((p) => p.selectedSlot?.bookedBy);
       if (bookedPaper?.selectedSlot?.date) {
         const date = new Date(bookedPaper.selectedSlot.date);
         setScheduleViewDate(date);
@@ -164,17 +164,17 @@ const PresenterHome = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get('/papers/presenter', {
-        params: { email: user?.email }
+      const response = await axios.get("/papers/presenter", {
+        params: { email: user?.email },
       });
       if (response.data.success) {
         setPapers(response.data.data);
       } else {
-        setError('Failed to fetch papers');
+        setError("Failed to fetch papers");
       }
     } catch (err) {
-      console.error('Error fetching papers:', err);
-      setError('Failed to load your papers. Please try again later.');
+      console.error("Error fetching papers:", err);
+      setError("Failed to load your papers. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -182,21 +182,21 @@ const PresenterHome = () => {
 
   const fetchScheduledPapers = async (date: Date) => {
     try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      const response = await axios.get('/papers/by-date', {
-        params: { date: formattedDate }
+      const formattedDate = format(date, "yyyy-MM-dd");
+      const response = await axios.get("/papers/by-date", {
+        params: { date: formattedDate },
       });
-      
+
       if (response.data.success) {
         const papersByDomain = response.data.data as { [key: string]: Paper[] };
         const allPapers: Paper[] = [];
-        Object.values(papersByDomain).forEach(papers => {
+        Object.values(papersByDomain).forEach((papers) => {
           allPapers.push(...papers);
         });
         setScheduledPapers(allPapers);
       }
     } catch (error) {
-      console.error('Error fetching scheduled papers:', error);
+      console.error("Error fetching scheduled papers:", error);
     }
   };
 
@@ -207,36 +207,42 @@ const PresenterHome = () => {
 
   const handleOpenDialog = (paper: Paper) => {
     if (paper.selectedSlot && paper.selectedSlot.bookedBy) {
-      const bookedByPresenter = paper.presenters.find(p => p.email === paper.selectedSlot?.bookedBy);
+      const bookedByPresenter = paper.presenters.find(
+        (p) => p.email === paper.selectedSlot?.bookedBy
+      );
       if (paper.selectedSlot.bookedBy !== user?.email) {
-        setError(`This slot has already been booked by ${bookedByPresenter?.name || 'another presenter'}`);
+        setError(
+          `This slot has already been booked by ${
+            bookedByPresenter?.name || "another presenter"
+          }`
+        );
         return;
       }
     }
 
     setSelectedPaper(paper);
     setSelectedDate(null);
-    setSelectedRoom('');
-    setSelectedTimeSlot('');
+    setSelectedRoom("");
+    setSelectedTimeSlot("");
     setSlotSelectionOpen(true);
-    setError('');
-    setSuccessMessage('');
+    setError("");
+    setSuccessMessage("");
   };
 
   const handleCloseDialog = () => {
     setSlotSelectionOpen(false);
     setSelectedPaper(null);
     setSelectedDate(null);
-    setSelectedRoom('');
-    setSelectedTimeSlot('');
-    setError('');
-    setSuccessMessage('');
+    setSelectedRoom("");
+    setSelectedTimeSlot("");
+    setError("");
+    setSuccessMessage("");
   };
 
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
-    setSelectedRoom('');
-    setSelectedTimeSlot('');
+    setSelectedRoom("");
+    setSelectedTimeSlot("");
     if (date && selectedPaper) {
       fetchAvailableSlots(selectedPaper.domain, date);
     }
@@ -244,15 +250,17 @@ const PresenterHome = () => {
 
   const handleRoomSelectChange = (event: SelectChangeEvent<string>) => {
     setSelectedRoom(event.target.value);
-    setSelectedTimeSlot('');
+    setSelectedTimeSlot("");
   };
 
-  const handleAccordionRoomChange = (domainRoom: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
-    setExpandedRooms(prev => ({
-      ...prev,
-      [domainRoom]: isExpanded
-    }));
-  };
+  const handleAccordionRoomChange =
+    (domainRoom: string) =>
+    (event: React.SyntheticEvent, isExpanded: boolean) => {
+      setExpandedRooms((prev) => ({
+        ...prev,
+        [domainRoom]: isExpanded,
+      }));
+    };
 
   const handleTimeSlotChange = (event: SelectChangeEvent<string>) => {
     setSelectedTimeSlot(event.target.value);
@@ -260,48 +268,58 @@ const PresenterHome = () => {
 
   const fetchAvailableSlots = async (domain: string, date: Date) => {
     try {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      const response = await axios.get('/papers/available-slots', {
-        params: { domain, date: formattedDate }
+      const formattedDate = format(date, "yyyy-MM-dd");
+      const response = await axios.get("/papers/available-slots", {
+        params: { domain, date: formattedDate },
       });
       if (response.data.success) {
         setAvailableSlots(response.data.data.availableSlots);
       }
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to fetch available slots');
+      setError(
+        error.response?.data?.message || "Failed to fetch available slots"
+      );
     }
   };
 
   const isDateDisabled = (date: Date) => {
-    return !ALLOWED_DATES.includes(format(date, 'yyyy-MM-dd'));
+    return !ALLOWED_DATES.includes(format(date, "yyyy-MM-dd"));
   };
 
   const handleSubmit = async () => {
-    if (!selectedPaper || !selectedDate || !selectedRoom || !selectedTimeSlot || !user?.email) {
-      setError('Please select all required fields');
+    if (
+      !selectedPaper ||
+      !selectedDate ||
+      !selectedRoom ||
+      !selectedTimeSlot ||
+      !user?.email
+    ) {
+      setError("Please select all required fields");
       return;
     }
 
     try {
-      const response = await axios.post('/papers/select-slot', {
+      console.log("??????????????");
+      const response = await axios.post("/papers/select-slot", {
         paperId: selectedPaper._id,
-        date: format(selectedDate, 'yyyy-MM-dd'),
+        date: format(selectedDate, "yyyy-MM-dd"),
         room: selectedRoom,
-        timeSlot: selectedTimeSlot,
-        presenterEmail: user.email
+        session: selectedTimeSlot,
+        presenterEmail: user.email,
       });
-
+      console.log(response.data);
       if (response.data.success) {
-        setSuccessMessage('Slot selected successfully!');
-        setPapers(prevPapers => 
-          prevPapers.map(p => 
+        console.log("&&&&&&&&&&&&");
+        setSuccessMessage("Slot selected successfully!");
+        setPapers((prevPapers) =>
+          prevPapers.map((p) =>
             p._id === selectedPaper._id ? response.data.data : p
           )
         );
         setTimeout(handleCloseDialog, 2000);
       }
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to select slot');
+      setError(error.response?.data?.message || "Failed to select slot");
     }
   };
 
@@ -309,57 +327,60 @@ const PresenterHome = () => {
     logout();
   };
 
-  const handleDomainChange = (domain: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
-    setExpandedDomain(isExpanded ? domain : false);
-  };
+  const handleDomainChange =
+    (domain: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+      setExpandedDomain(isExpanded ? domain : false);
+    };
 
-  const filteredScheduledPapers = scheduledPapers.filter(paper => {
+  const filteredScheduledPapers = scheduledPapers.filter((paper) => {
     if (!showSchedule) return false;
-    
+
     const searchTermLower = searchTerm.toLowerCase().trim();
-    
+
     let matchesSearch = true;
-    if (searchTermLower !== '') {
+    if (searchTermLower !== "") {
       switch (searchCriteria) {
-        case 'paperId':
+        case "paperId":
           matchesSearch = paper.paperId.toLowerCase().includes(searchTermLower);
           break;
-        case 'title':
+        case "title":
           matchesSearch = paper.title.toLowerCase().includes(searchTermLower);
           break;
-        case 'presenter':
-          matchesSearch = paper.presenters.some(p => 
-            p.name.toLowerCase().includes(searchTermLower) ||
-            p.email.toLowerCase().includes(searchTermLower)
+        case "presenter":
+          matchesSearch = paper.presenters.some(
+            (p) =>
+              p.name.toLowerCase().includes(searchTermLower) ||
+              p.email.toLowerCase().includes(searchTermLower)
           );
           break;
         default:
-          matchesSearch = 
+          matchesSearch =
             paper.paperId.toLowerCase().includes(searchTermLower) ||
             paper.title.toLowerCase().includes(searchTermLower) ||
-            paper.presenters.some(p => 
-              p.name.toLowerCase().includes(searchTermLower) ||
-              p.email.toLowerCase().includes(searchTermLower)
+            paper.presenters.some(
+              (p) =>
+                p.name.toLowerCase().includes(searchTermLower) ||
+                p.email.toLowerCase().includes(searchTermLower)
             );
       }
     }
-    
+
     return matchesSearch;
   });
 
   const groupedByDomain = filteredScheduledPapers.reduce((acc, paper) => {
     if (!paper.selectedSlot) return acc;
-    
+
     const { domain } = paper;
     const room = paper.selectedSlot.room;
-    
+
     if (!acc[domain]) {
       acc[domain] = {};
     }
     if (!acc[domain][room]) {
       acc[domain][room] = [];
     }
-    
+
     acc[domain][room].push(paper);
     return acc;
   }, {} as { [domain: string]: { [room: string]: Paper[] } });
@@ -372,39 +393,48 @@ const PresenterHome = () => {
   };
 
   // Add status color functions
-  const getStatusColor = (status: Paper['presentationStatus'], theme: Theme) => {
+  const getStatusColor = (
+    status: Paper["presentationStatus"],
+    theme: Theme
+  ) => {
     switch (status) {
-      case 'Presented':
+      case "Presented":
         return theme.palette.success.main;
-      case 'In Progress':
+      case "In Progress":
         return theme.palette.warning.main;
-      case 'Cancelled':
+      case "Cancelled":
         return theme.palette.error.main;
       default:
         return theme.palette.info.main;
     }
   };
 
-  const getStatusBgColor = (status: Paper['presentationStatus'], theme: Theme) => {
+  const getStatusBgColor = (
+    status: Paper["presentationStatus"],
+    theme: Theme
+  ) => {
     switch (status) {
-      case 'Presented':
+      case "Presented":
         return alpha(theme.palette.success.main, 0.05);
-      case 'In Progress':
+      case "In Progress":
         return alpha(theme.palette.warning.main, 0.05);
-      case 'Cancelled':
+      case "Cancelled":
         return alpha(theme.palette.error.main, 0.05);
       default:
         return alpha(theme.palette.info.main, 0.05);
     }
   };
 
-  const getStatusBgHoverColor = (status: Paper['presentationStatus'], theme: Theme) => {
+  const getStatusBgHoverColor = (
+    status: Paper["presentationStatus"],
+    theme: Theme
+  ) => {
     switch (status) {
-      case 'Presented':
+      case "Presented":
         return alpha(theme.palette.success.main, 0.08);
-      case 'In Progress':
+      case "In Progress":
         return alpha(theme.palette.warning.main, 0.08);
-      case 'Cancelled':
+      case "Cancelled":
         return alpha(theme.palette.error.main, 0.08);
       default:
         return alpha(theme.palette.info.main, 0.08);
@@ -426,10 +456,8 @@ const PresenterHome = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Presenter Dashboard
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2">
-              {user?.email}
-            </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography variant="body2">{user?.email}</Typography>
             <IconButton color="inherit" onClick={handleLogout}>
               <LogoutIcon />
             </IconButton>
@@ -439,7 +467,11 @@ const PresenterHome = () => {
 
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         {successMessage && (
-          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
+          <Alert
+            severity="success"
+            sx={{ mb: 2 }}
+            onClose={() => setSuccessMessage(null)}
+          >
             {successMessage}
           </Alert>
         )}
@@ -451,14 +483,14 @@ const PresenterHome = () => {
         )}
 
         {papers.length === 0 ? (
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              p: 4, 
-              textAlign: 'center',
+          <Paper
+            elevation={0}
+            sx={{
+              p: 4,
+              textAlign: "center",
               borderRadius: 2,
               border: 1,
-              borderColor: 'divider'
+              borderColor: "divider",
             }}
           >
             <Typography variant="h6" color="textSecondary" gutterBottom>
@@ -472,27 +504,41 @@ const PresenterHome = () => {
           <Grid container spacing={3}>
             {papers.map((paper) => (
               <Grid item xs={12} key={paper._id}>
-                <Card 
+                <Card
                   elevation={0}
-                  sx={{ 
+                  sx={{
                     borderRadius: 2,
                     border: 1,
-                    borderColor: 'divider',
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                      boxShadow: 1
-                    }
+                    borderColor: "divider",
+                    "&:hover": {
+                      borderColor: "primary.main",
+                      boxShadow: 1,
+                    },
                   }}
                 >
                   <CardContent>
                     <Grid container spacing={2}>
                       <Grid item xs={12}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
+                            mb: 2,
+                          }}
+                        >
                           <Box>
                             <Typography variant="h6" gutterBottom>
                               {paper.title}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                gap: 1,
+                                mb: 2,
+                                flexWrap: "wrap",
+                              }}
+                            >
                               <Chip
                                 size="small"
                                 icon={<DomainIcon />}
@@ -505,12 +551,21 @@ const PresenterHome = () => {
                                 label={`Paper ID: ${paper.paperId}`}
                                 color="secondary"
                               />
-                              {paper.selectedSlot && paper.selectedSlot.bookedBy ? (
+                              {paper.selectedSlot &&
+                              paper.selectedSlot.bookedBy ? (
                                 <Chip
                                   size="small"
                                   icon={<CheckCircleIcon />}
-                                  label={paper.selectedSlot.bookedBy === user?.email ? 'Booked by you' : 'Slot Booked'}
-                                  color={paper.selectedSlot.bookedBy === user?.email ? 'success' : 'default'}
+                                  label={
+                                    paper.selectedSlot.bookedBy === user?.email
+                                      ? "Booked by you"
+                                      : "Slot Booked"
+                                  }
+                                  color={
+                                    paper.selectedSlot.bookedBy === user?.email
+                                      ? "success"
+                                      : "default"
+                                  }
                                 />
                               ) : (
                                 <Chip
@@ -521,38 +576,55 @@ const PresenterHome = () => {
                                 />
                               )}
                             </Box>
-                            {paper.selectedSlot && paper.selectedSlot.bookedBy && (
-                              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                <Chip
-                                  size="small"
-                                  icon={<EventIcon />}
-                                  label={format(new Date(paper.selectedSlot.date), 'dd MMM yyyy')}
-                                  variant="outlined"
-                                />
-                                <Chip
-                                  size="small"
-                                  icon={<RoomIcon />}
-                                  label={`Room ${paper.selectedSlot.room}`}
-                                  variant="outlined"
-                                />
-                                <Chip
-                                  size="small"
-                                  icon={<ScheduleIcon />}
-                                  label={paper.selectedSlot.timeSlot}
-                                  variant="outlined"
-                                />
-                                {paper.selectedSlot.bookedBy !== user?.email && (
+                            {paper.selectedSlot &&
+                              paper.selectedSlot.bookedBy && (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    gap: 1,
+                                    flexWrap: "wrap",
+                                  }}
+                                >
                                   <Chip
                                     size="small"
-                                    icon={<PersonIcon />}
-                                    label={`Booked by: ${paper.presenters.find(p => p.email === paper.selectedSlot?.bookedBy)?.name}`}
+                                    icon={<EventIcon />}
+                                    label={format(
+                                      new Date(paper.selectedSlot.date),
+                                      "dd MMM yyyy"
+                                    )}
                                     variant="outlined"
                                   />
-                                )}
-                              </Box>
-                            )}
+                                  <Chip
+                                    size="small"
+                                    icon={<RoomIcon />}
+                                    label={`Room ${paper.selectedSlot.room}`}
+                                    variant="outlined"
+                                  />
+                                  <Chip
+                                    size="small"
+                                    icon={<ScheduleIcon />}
+                                    label={paper.selectedSlot.timeSlot}
+                                    variant="outlined"
+                                  />
+                                  {paper.selectedSlot.bookedBy !==
+                                    user?.email && (
+                                    <Chip
+                                      size="small"
+                                      icon={<PersonIcon />}
+                                      label={`Booked by: ${
+                                        paper.presenters.find(
+                                          (p) =>
+                                            p.email ===
+                                            paper.selectedSlot?.bookedBy
+                                        )?.name
+                                      }`}
+                                      variant="outlined"
+                                    />
+                                  )}
+                                </Box>
+                              )}
                           </Box>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Box sx={{ display: "flex", gap: 1 }}>
                             <Button
                               variant="outlined"
                               size="small"
@@ -561,14 +633,17 @@ const PresenterHome = () => {
                             >
                               View Details
                             </Button>
-                            {(!paper.selectedSlot?.bookedBy || paper.selectedSlot?.bookedBy === user?.email) && (
+                            {(!paper.selectedSlot?.bookedBy ||
+                              paper.selectedSlot?.bookedBy === user?.email) && (
                               <Button
                                 variant="contained"
                                 size="small"
                                 onClick={() => handleOpenDialog(paper)}
                                 startIcon={<ScheduleIcon />}
                               >
-                                {paper.selectedSlot?.bookedBy ? 'Change Slot' : 'Select Slot'}
+                                {paper.selectedSlot?.bookedBy
+                                  ? "Change Slot"
+                                  : "Select Slot"}
                               </Button>
                             )}
                           </Box>
@@ -587,7 +662,7 @@ const PresenterHome = () => {
             <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
               Scheduled Presentations
             </Typography>
-            
+
             <Grid container spacing={3} sx={{ mb: 4 }}>
               <Grid item xs={12} md={4}>
                 <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -600,20 +675,22 @@ const PresenterHome = () => {
                     slotProps={{
                       textField: {
                         fullWidth: true,
-                        size: "small"
-                      }
+                        size: "small",
+                      },
                     }}
                   />
                 </LocalizationProvider>
               </Grid>
               <Grid item xs={12} md={8}>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: "flex", gap: 1 }}>
                   <FormControl size="small" sx={{ minWidth: 120 }}>
                     <InputLabel>Search By</InputLabel>
                     <Select
                       value={searchCriteria}
                       label="Search By"
-                      onChange={(e) => setSearchCriteria(e.target.value as SearchCriteria)}
+                      onChange={(e) =>
+                        setSearchCriteria(e.target.value as SearchCriteria)
+                      }
                     >
                       <MenuItem value="default">All Fields</MenuItem>
                       <MenuItem value="paperId">Paper ID</MenuItem>
@@ -624,7 +701,11 @@ const PresenterHome = () => {
                   <TextField
                     fullWidth
                     size="small"
-                    label={`Search by ${searchCriteria === 'default' ? 'all fields' : searchCriteria}`}
+                    label={`Search by ${
+                      searchCriteria === "default"
+                        ? "all fields"
+                        : searchCriteria
+                    }`}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     InputProps={{
@@ -646,32 +727,33 @@ const PresenterHome = () => {
                 onChange={handleDomainChange(domain)}
                 sx={{
                   mb: 2,
-                  '&:before': { display: 'none' },
-                  borderRadius: '8px !important',
-                  overflow: 'hidden',
+                  "&:before": { display: "none" },
+                  borderRadius: "8px !important",
+                  overflow: "hidden",
                   border: 1,
-                  borderColor: 'divider'
+                  borderColor: "divider",
                 }}
               >
                 <AccordionSummary
                   expandIcon={<ExpandMoreIcon />}
                   sx={{
                     backgroundColor: theme.palette.primary.light,
-                    color: 'white',
-                    '& .MuiAccordionSummary-expandIconWrapper': {
-                      color: 'white'
-                    }
+                    color: "white",
+                    "& .MuiAccordionSummary-expandIconWrapper": {
+                      color: "white",
+                    },
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
                     <DomainIcon sx={{ mr: 1 }} />
-                    <Typography variant="h6">
-                      {domain}
-                    </Typography>
+                    <Typography variant="h6">{domain}</Typography>
                     <Chip
                       size="small"
                       label={`${Object.keys(rooms).length} Rooms`}
-                      sx={{ ml: 2, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
+                      sx={{
+                        ml: 2,
+                        backgroundColor: "rgba(255, 255, 255, 0.2)",
+                      }}
                     />
                   </Box>
                 </AccordionSummary>
@@ -683,37 +765,46 @@ const PresenterHome = () => {
                       onChange={handleAccordionRoomChange(`${domain}-${room}`)}
                       sx={{
                         mb: 2,
-                        '&:before': { display: 'none' },
+                        "&:before": { display: "none" },
                         borderRadius: 1,
-                        overflow: 'hidden',
+                        overflow: "hidden",
                         border: 1,
-                        borderColor: 'divider'
+                        borderColor: "divider",
                       }}
                     >
                       <AccordionSummary
                         expandIcon={<ExpandMoreIcon />}
                         sx={{
-                          backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                          '&:hover': {
-                            backgroundColor: alpha(theme.palette.primary.main, 0.08)
-                          }
+                          backgroundColor: alpha(
+                            theme.palette.primary.main,
+                            0.05
+                          ),
+                          "&:hover": {
+                            backgroundColor: alpha(
+                              theme.palette.primary.main,
+                              0.08
+                            ),
+                          },
                         }}
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
                           <RoomIcon color="primary" />
-                          <Typography variant="h6">
-                            {room}
-                          </Typography>
-                          <Chip 
-                            label={`${roomPapers.length} Presentations`} 
-                            size="small" 
+                          <Typography variant="h6">{room}</Typography>
+                          <Chip
+                            label={`${roomPapers.length} Presentations`}
+                            size="small"
                             sx={{ ml: 2 }}
                           />
                         </Box>
                       </AccordionSummary>
                       <AccordionDetails sx={{ p: 2 }}>
                         <TableContainer>
-                          <Table size="medium" aria-label="presentation schedule">
+                          <Table
+                            size="medium"
+                            aria-label="presentation schedule"
+                          >
                             <TableHead>
                               <TableRow>
                                 <StyledTableCell>Time Slot</StyledTableCell>
@@ -721,30 +812,69 @@ const PresenterHome = () => {
                                 <StyledTableCell>Title</StyledTableCell>
                                 <StyledTableCell>Presenters</StyledTableCell>
                                 <StyledTableCell>Status</StyledTableCell>
-                                <StyledTableCell align="right">Actions</StyledTableCell>
+                                <StyledTableCell align="right">
+                                  Actions
+                                </StyledTableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
                               {roomPapers
-                                .sort((a, b) => (a.selectedSlot?.timeSlot || '').localeCompare(b.selectedSlot?.timeSlot || ''))
+                                .sort((a, b) =>
+                                  (
+                                    a.selectedSlot?.timeSlot || ""
+                                  ).localeCompare(
+                                    b.selectedSlot?.timeSlot || ""
+                                  )
+                                )
                                 .map((paper) => (
                                   <StyledTableRow key={paper._id}>
                                     <StyledTableCell>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <ScheduleIcon fontSize="small" color="action" />
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 1,
+                                        }}
+                                      >
+                                        <ScheduleIcon
+                                          fontSize="small"
+                                          color="action"
+                                        />
                                         {paper.selectedSlot?.timeSlot}
                                       </Box>
                                     </StyledTableCell>
-                                    <StyledTableCell>{paper.paperId}</StyledTableCell>
-                                    <StyledTableCell>{paper.title}</StyledTableCell>
                                     <StyledTableCell>
-                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                        {paper.presenters.map((presenter, index) => (
-                                          <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            <PersonIcon fontSize="small" color="action" />
-                                            {presenter.name}
-                                          </Box>
-                                        ))}
+                                      {paper.paperId}
+                                    </StyledTableCell>
+                                    <StyledTableCell>
+                                      {paper.title}
+                                    </StyledTableCell>
+                                    <StyledTableCell>
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          flexDirection: "column",
+                                          gap: 0.5,
+                                        }}
+                                      >
+                                        {paper.presenters.map(
+                                          (presenter, index) => (
+                                            <Box
+                                              key={index}
+                                              sx={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 0.5,
+                                              }}
+                                            >
+                                              <PersonIcon
+                                                fontSize="small"
+                                                color="action"
+                                              />
+                                              {presenter.name}
+                                            </Box>
+                                          )
+                                        )}
                                       </Box>
                                     </StyledTableCell>
                                     <StyledTableCell>
@@ -752,11 +882,20 @@ const PresenterHome = () => {
                                         label={paper.presentationStatus}
                                         size="small"
                                         sx={{
-                                          color: getStatusColor(paper.presentationStatus, theme),
-                                          bgcolor: getStatusBgColor(paper.presentationStatus, theme),
-                                          '&:hover': {
-                                            bgcolor: getStatusBgHoverColor(paper.presentationStatus, theme)
-                                          }
+                                          color: getStatusColor(
+                                            paper.presentationStatus,
+                                            theme
+                                          ),
+                                          bgcolor: getStatusBgColor(
+                                            paper.presentationStatus,
+                                            theme
+                                          ),
+                                          "&:hover": {
+                                            bgcolor: getStatusBgHoverColor(
+                                              paper.presentationStatus,
+                                              theme
+                                            ),
+                                          },
                                         }}
                                       />
                                     </StyledTableCell>
@@ -793,15 +932,15 @@ const PresenterHome = () => {
           onClose={() => setDetailsOpen(false)}
         />
 
-        <Dialog 
-          open={slotSelectionOpen} 
+        <Dialog
+          open={slotSelectionOpen}
           onClose={handleCloseDialog}
           maxWidth="sm"
           fullWidth
           PaperProps={{
             sx: {
-              borderRadius: 2
-            }
+              borderRadius: 2,
+            },
           }}
         >
           <DialogTitle>
@@ -820,12 +959,12 @@ const PresenterHome = () => {
                   value={selectedDate}
                   onChange={handleDateChange}
                   shouldDisableDate={isDateDisabled}
-                  defaultCalendarMonth={new Date('2026-01-09')}
+                  defaultCalendarMonth={new Date("2026-01-09")}
                   slotProps={{
                     textField: {
                       fullWidth: true,
-                      sx: { mb: 2 }
-                    }
+                      sx: { mb: 2 },
+                    },
                   }}
                 />
               </LocalizationProvider>
@@ -849,31 +988,33 @@ const PresenterHome = () => {
 
               {selectedRoom && (
                 <FormControl fullWidth>
-                  <InputLabel>Time Slot</InputLabel>
+                  <InputLabel>Session</InputLabel>
                   <Select
-                    value={selectedTimeSlot}
-                    label="Time Slot"
-                    onChange={handleTimeSlotChange}
+                    value={selectedTimeSlot} // Now storing session name instead of time slot
+                    label="Session"
+                    onChange={(event) =>
+                      setSelectedTimeSlot(event.target.value)
+                    }
                   >
-                    {selectedRoom && availableSlots
-                      .find(slot => slot.room === selectedRoom)
-                      ?.timeSlots.map((timeSlot) => (
-                        <MenuItem key={timeSlot} value={timeSlot}>
-                          {timeSlot}
-                        </MenuItem>
-                      ))}
+                    {/* Session 1 Option */}
+                    <MenuItem value="Session 1">
+                      Session 1 (9:00 AM - 12:00 PM)
+                    </MenuItem>
+
+                    {/* Session 2 Option */}
+                    <MenuItem value="Session 2">
+                      Session 2 (1:00 PM - 4:00 PM)
+                    </MenuItem>
                   </Select>
                 </FormControl>
               )}
             </Box>
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
-            <Button onClick={handleCloseDialog}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSubmit} 
-              variant="contained" 
+            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button
+              onClick={handleSubmit}
+              variant="contained"
               startIcon={<ScheduleIcon />}
               disabled={!selectedDate || !selectedRoom || !selectedTimeSlot}
             >
@@ -886,4 +1027,4 @@ const PresenterHome = () => {
   );
 };
 
-export default PresenterHome; 
+export default PresenterHome;

@@ -36,6 +36,7 @@ interface Paper {
   synopsis: string;
   day: number | null;
   timeSlot: string | null;
+  session: string | null;
   room: string | null;
   isSlotAllocated: boolean;
   presentationDate?: Date;

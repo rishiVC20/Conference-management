@@ -77,37 +77,73 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// const sendSlotConfirmationEmail = async (paper) => {
+//   const { presenters, title, domain, selectedSlot } = paper;
+//   const { date, room, timeSlot } = selectedSlot;
+//   const formattedDate = new Date(date).toLocaleDateString();
+
+//   const mailOptions = {
+//     from: process.env.MAIL_USER,
+//     to: presenters.map(p => p.email),
+//     subject: `Slot Confirmation for Paper: ${title}`,
+//     text: `Dear Presenter(s),
+
+// Your presentation slot has been confirmed for the following paper:
+
+// Title: ${title}
+// Domain: ${domain}
+// Date: ${formattedDate}
+// Room: ${room}
+// Time Slot: ${timeSlot}
+
+// Please be present at least 15 minutes before your scheduled time.
+
+// This is an auto-generated message. Please do not reply.
+
+// Regards,
+// Conference Management Team`
+//   };
+
+//   // 🐞 Log before sending
+//   console.log('Sending email to:', mailOptions.to);
+
+//   // 🔍 Wrap in try-catch to log if failure occurs
+//   try {
+//     const info = await transporter.sendMail(mailOptions);
+//     console.log('Email sent successfully:', info.response);
+//   } catch (error) {
+//     console.error('❌ Error sending email:', error);
+//   }
+// };
+
+
 const sendSlotConfirmationEmail = async (paper) => {
   const { presenters, title, domain, selectedSlot } = paper;
-  const { date, room, timeSlot } = selectedSlot;
+  const { date, room, session } = selectedSlot; // session replaces timeSlot
   const formattedDate = new Date(date).toLocaleDateString();
 
   const mailOptions = {
     from: process.env.MAIL_USER,
     to: presenters.map(p => p.email),
-    subject: `Slot Confirmation for Paper: ${title}`,
+    subject: `Session Confirmation for Paper: ${title}`,
     text: `Dear Presenter(s),
 
-Your presentation slot has been confirmed for the following paper:
+Your presentation session has been confirmed for the following paper:
 
 Title: ${title}
 Domain: ${domain}
 Date: ${formattedDate}
 Room: ${room}
-Time Slot: ${timeSlot}
+Session: ${session}
 
 Please be present at least 15 minutes before your scheduled time.
 
 This is an auto-generated message. Please do not reply.
 
-Regards,
+Regards,  
 Conference Management Team`
   };
 
-  // 🐞 Log before sending
-  console.log('Sending email to:', mailOptions.to);
-
-  // 🔍 Wrap in try-catch to log if failure occurs
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log('Email sent successfully:', info.response);
@@ -119,57 +155,45 @@ Conference Management Team`
 
 const selectSlot = async (req, res) => {
   try {
-    const { paperId, date, room, timeSlot, presenterEmail } = req.body;
+    const { paperId, date, room, session, presenterEmail } = req.body; // session replaces timeSlot
 
     const paper = await Paper.findById(paperId);
     if (!paper) {
       return res.status(404).json({ success: false, message: 'Paper not found' });
     }
-
-    const existingBooking = await Paper.findOne({
-      _id: { $ne: paperId },
+    console.log(":::::::::::::::::::::");
+    // Ensure no more than 6 bookings per session in a room
+    const sessionCount = await Paper.countDocuments({
       'selectedSlot.date': date,
       'selectedSlot.room': room,
-      'selectedSlot.timeSlot': timeSlot
+      'selectedSlot.session': session
     });
 
-    if (existingBooking) {
+    if (sessionCount >= 6) {
       return res.status(409).json({
         success: false,
-        message: 'Slot already booked by another presenter'
+        message: `Session ${session} in Room ${room} is already fully booked`
       });
     }
 
+    // Update paper with session instead of time slot
     const updated = await Paper.findOneAndUpdate(
-      {
-        _id: paperId,
-        $or: [
-          { 'selectedSlot.bookedBy': presenterEmail },
-          { 'selectedSlot': { $exists: false } },
-          {
-            'selectedSlot.date': { $ne: date },
-            'selectedSlot.room': { $ne: room },
-            'selectedSlot.timeSlot': { $ne: timeSlot }
-          }
-        ]
-      },
+      { _id: paperId },
       {
         selectedSlot: {
           date,
           room,
-          timeSlot,
+          session, // Store "Session 1" or "Session 2"
           bookedBy: presenterEmail
         }
       },
-      {
-        new: true
-      }
+      { new: true, runValidators: true }
     );
 
     if (!updated) {
       return res.status(409).json({
         success: false,
-        message: 'Slot is no longer available. Please choose a different slot.'
+        message: 'Session is no longer available. Please choose a different session.'
       });
     }
 
@@ -177,18 +201,20 @@ const selectSlot = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Slot selected and confirmation email sent.',
+      message: 'Session selected and confirmation email sent.',
       data: updated
     });
   } catch (error) {
-    console.error('Error selecting slot:', error);
+    console.error('Error selecting session:', error);
     res.status(500).json({
       success: false,
-      message: 'Error selecting slot',
+      message: 'Error selecting session',
       error: error.message
     });
   }
 };
+
+
 
 const adminAddPaper = async (req, res) => {
   try {
