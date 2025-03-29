@@ -8,10 +8,14 @@ import PresenterHome from './pages/PresenterHome';
 import AttendeeHome from './pages/AttendeeHome';
 import AdminHome from './pages/AdminHome';
 import AdminDashboard from './pages/AdminDashboard';
+import AddPaper from './pages/AddPaper'; 
 import ScheduleManager from './pages/ScheduleManager';
 import CommunicationCenter from './pages/CommunicationCenter';
 import PresenterManagement from './pages/PresenterManagement';
 import PrivateRoute from './components/PrivateRoute';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+
 import { AuthProvider } from './context/AuthContext';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -56,6 +60,8 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route
                 path="/presenter"
                 element={
@@ -101,6 +107,14 @@ const App: React.FC = () => {
                 element={
                   <PrivateRoute role="admin">
                     <CommunicationCenter />
+                  </PrivateRoute>
+                }
+              />
+               <Route
+                path="/admin/add-paper"
+                element={
+                  <PrivateRoute role="admin">
+                    <AddPaper />
                   </PrivateRoute>
                 }
               />

@@ -297,6 +297,12 @@ const AdminHome: React.FC = () => {
 
   const adminFeatures = [
     {
+      title: 'Add Paper',
+      description: 'Manually add a paper to the database',
+      icon: <AssignmentIcon />, // use any icon you like
+      path: '/admin/add-paper',
+    },
+    {
       title: 'Analytics Dashboard',
       description: 'View conference statistics and metrics',
       icon: <DashboardIcon />,

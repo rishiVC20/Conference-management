@@ -24,7 +24,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['admin', 'presenter', 'attendee'],
         required: true
-    }
+    },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
+
 }, {
     timestamps: true
 });
