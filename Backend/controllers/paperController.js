@@ -4,8 +4,6 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 const { generateTeamId } = require('../utils/excelImporter');
 
-
-
 const generatePaperId = (domain, count) => {
   const domainPrefix = domain.substring(0, 3).toUpperCase();
   const year = new Date().getFullYear();
@@ -224,10 +222,8 @@ const adminAddPaper = async (req, res) => {
     if (!title || !domain || !synopsis || !Array.isArray(presenters) || presenters.length === 0) {
       return res.status(400).json({ success: false, message: 'All fields are required including at least one presenter.' });
     }
-
-    // Count existing papers in the domain to generate teamId
-    const count = await Paper.countDocuments({ domain });
-    const teamId = generateTeamId(domain, count);
+    
+    const teamId = await generateTeamId(domain);
 
     const newPaper = new Paper({
       title,

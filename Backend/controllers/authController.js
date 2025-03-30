@@ -1,5 +1,9 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
+require('dotenv').config();
+
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRE = process.env.JWT_EXPIRE || '30d';
@@ -9,6 +13,66 @@ const signToken = (id) => {
         expiresIn: JWT_EXPIRE
     });
 };
+
+// Forgot password controller
+exports.forgotPassword = async (req, res) => {
+    const { email } = req.body;
+  
+    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+  
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ success: false, message: 'No user with that email' });
+  
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save({ validateBeforeSave: false });
+  
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+  
+    const message = `Click the link to reset your password:\n\n${resetUrl}`;
+  
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Reset',
+        text: message
+      });
+  
+      res.status(200).json({ success: true, message: 'Reset email sent' });
+    } catch (err) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+      res.status(500).json({ success: false, message: 'Failed to send email' });
+    }
+  };
+  
+  // Reset password controller
+  exports.resetPassword = async (req, res) => {
+    const resetToken = req.params.token;
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+  
+    if (!user) return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+  
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ success: false, message: 'New password is required' });
+  
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+  
+    res.status(200).json({ success: true, message: 'Password reset successful' });
+  };
+
 
 exports.register = async (req, res) => {
     try {

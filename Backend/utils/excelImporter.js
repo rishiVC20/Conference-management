@@ -30,10 +30,24 @@ const generateRoomName = (domain, roomNumber) => {
   return `${domainCode}-R${String(roomNumber).padStart(2, '0')}`;
 };
 
-const generateTeamId = (domain, index) => {
-  const domainCode = DOMAIN_CODES[domain] || domain.split(' ').map(word => word[0]).join('').toUpperCase();
-  return `${domainCode}${String(index + 1).padStart(3, '0')}`;
+const generateTeamId = async (domain) => {
+  const domainCode = DOMAIN_CODES[domain] || domain.split(' ').map(word => word[0].toUpperCase()).join('');
+  const regex = new RegExp(`^${domainCode}(\\d{3})$`, 'i');
+
+  const latest = await Paper.find({ paperId: { $regex: regex } })
+    .sort({ paperId: -1 })
+    .limit(1);
+
+  let nextNumber = 1;
+  if (latest.length > 0) {
+    const lastId = latest[0].paperId;
+    const numberPart = parseInt(lastId.slice(domainCode.length), 10);
+    nextNumber = numberPart + 1;
+  }
+
+  return `${domainCode}${String(nextNumber).padStart(3, '0')}`;
 };
+
 
 // Check if a paper is a duplicate (same title and exact same presenters)
 const isDuplicate = (title, presenters, newPapers) => {

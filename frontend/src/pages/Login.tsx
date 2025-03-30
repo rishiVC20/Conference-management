@@ -120,6 +120,12 @@ const Login = () => {
           onChange={(e) => setPassword(e.target.value)}
           disabled={loading}
         />
+
+        <Box sx={{ textAlign: 'right', width: '100%' }}>
+          <Link href="/forgot-password" variant="body2">
+            Forgot password?
+          </Link>
+        </Box>
         <Button
           type="submit"
           fullWidth
