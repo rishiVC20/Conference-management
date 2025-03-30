@@ -9,6 +9,8 @@ import AttendeeHome from './pages/AttendeeHome';
 import AdminHome from './pages/AdminHome';
 import AdminDashboard from './pages/AdminDashboard';
 import AddPaper from './pages/AddPaper'; 
+import AddSession from './pages/AddSession';
+
 import ScheduleManager from './pages/ScheduleManager';
 import CommunicationCenter from './pages/CommunicationCenter';
 import PresenterManagement from './pages/PresenterManagement';
@@ -115,6 +117,14 @@ const App: React.FC = () => {
                 element={
                   <PrivateRoute role="admin">
                     <AddPaper />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/admin/add-session"
+                element={
+                  <PrivateRoute role="admin">
+                <AddSession />
                   </PrivateRoute>
                 }
               />

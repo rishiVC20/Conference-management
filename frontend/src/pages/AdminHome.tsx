@@ -303,6 +303,12 @@ const AdminHome: React.FC = () => {
       path: '/admin/add-paper',
     },
     {
+      title: 'Add Special Session',
+      description: 'Schedule a guest, keynote, or cultural session',
+      icon: <EventIcon />,
+      path: '/admin/add-session',
+    },
+    {
       title: 'Analytics Dashboard',
       description: 'View conference statistics and metrics',
       icon: <DashboardIcon />,

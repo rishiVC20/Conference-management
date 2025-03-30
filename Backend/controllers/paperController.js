@@ -4,8 +4,6 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 const { generateTeamId } = require('../utils/excelImporter');
 
-
-
 const generatePaperId = (domain, count) => {
   const domainPrefix = domain.substring(0, 3).toUpperCase();
   const year = new Date().getFullYear();
