@@ -92,6 +92,48 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
+interface SpecialSession {
+  _id: string;
+  title: string;
+  speaker: string;
+  room: string;
+  sessionType: 'Guest Lecture' | 'Keynote Speech' | 'Cultural Event' | 'Workshop';
+  date: string;
+  startTime: string;
+  endTime: string;
+  session: 'Session 1' | 'Session 2';
+  description?: string;
+}
+
+interface Event {
+  isSpecialSession: boolean;
+  eventType: 'presentation' | 'special';
+  _id: string;
+  title: string;
+  room: string;
+  session: string;
+  startTime?: string;
+  endTime?: string;
+  speaker?: string;
+  sessionType?: string;
+  description?: string;
+  selectedSlot?: {
+    date: string;
+    room: string;
+    timeSlot: string;
+    bookedBy?: string;
+  };
+  presenters?: Array<{
+    name: string;
+    email: string;
+    phone: string;
+  }>;
+  presentationStatus?: 'Scheduled' | 'In Progress' | 'Presented' | 'Cancelled';
+  domain?: string;
+  paperId?: string;
+  synopsis?: string;
+}
+
 interface Paper {
   _id: string;
   title: string;
@@ -119,7 +161,7 @@ const PresenterHome = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState("All");
-  const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
+  const [selectedPaper, setSelectedPaper] = useState<Paper | Event | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [slotSelectionOpen, setSlotSelectionOpen] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
@@ -128,7 +170,7 @@ const PresenterHome = () => {
   const [slotError, setSlotError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [scheduledPapers, setScheduledPapers] = useState<Paper[]>([]);
+  const [scheduledPapers, setScheduledPapers] = useState<Event[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSession, setSelectedSession] = useState("");
   const [searchCriteria, setSearchCriteria] =
@@ -189,36 +231,23 @@ const PresenterHome = () => {
 
       if (response.data.success) {
         console.log("Scheduled papers response:", response.data);
-        const papersByDomain = response.data.data;
-        const allPapers: Paper[] = [];
-        
-        // Convert the response data to array of papers
-        if (Array.isArray(papersByDomain)) {
-          allPapers.push(...papersByDomain);
-        } else {
-          Object.values(papersByDomain).forEach((papers: any) => {
-            if (Array.isArray(papers)) {
-              allPapers.push(...papers);
-            }
-          });
-        }
-        
-        console.log("Processed papers:", allPapers);
-        setScheduledPapers(allPapers);
+        const allEvents: Event[] = response.data.data;
+        setScheduledPapers(allEvents);
       }
     } catch (error) {
       console.error("Error fetching scheduled papers:", error);
     }
   };
 
-  const handleViewDetails = (paper: Paper) => {
+  const handleViewDetails = (paper: Paper | Event) => {
     setSelectedPaper(paper);
     setDetailsOpen(true);
   };
 
-  const handleOpenDialog = (paper: Paper) => {
-    if (paper.selectedSlot && paper.selectedSlot.bookedBy) {
-      const bookedByPresenter = paper.presenters.find(
+  const handleOpenDialog = (paper: Paper | Event) => {
+    if ('selectedSlot' in paper && paper.selectedSlot && paper.selectedSlot.bookedBy) {
+      const presenters = 'presenters' in paper && paper.presenters ? paper.presenters : [];
+      const bookedByPresenter = presenters.find(
         (p) => p.email === paper.selectedSlot?.bookedBy
       );
       if (paper.selectedSlot.bookedBy !== user?.email) {
@@ -250,29 +279,6 @@ const PresenterHome = () => {
     setSuccessMessage("");
   };
 
-  const handleDateChange = (date: Date | null) => {
-    setSelectedDate(date);
-    setSelectedRoom("");
-    setSelectedTimeSlot("");
-    if (date && selectedPaper) {
-      fetchAvailableSlots(selectedPaper.domain, date);
-    }
-  };
-
-  const handleRoomSelectChange = (event: SelectChangeEvent<string>) => {
-    setSelectedRoom(event.target.value);
-    setSelectedTimeSlot("");
-  };
-
-  const handleAccordionRoomChange =
-    (domainRoom: string) =>
-    (event: React.SyntheticEvent, isExpanded: boolean) => {
-      setExpandedRooms((prev) => ({
-        ...prev,
-        [domainRoom]: isExpanded,
-      }));
-    };
-
   const handleTimeSlotChange = (event: SelectChangeEvent<string>) => {
     setSelectedTimeSlot(event.target.value);
   };
@@ -293,6 +299,29 @@ const PresenterHome = () => {
     }
   };
 
+  const handleDateChange = (date: Date | null) => {
+    setSelectedDate(date);
+    setSelectedRoom("");
+    setSelectedTimeSlot("");
+    if (date && selectedPaper && !('isSpecialSession' in selectedPaper)) {
+      fetchAvailableSlots(selectedPaper.domain, date);
+    }
+  };
+
+  const handleRoomSelectChange = (event: SelectChangeEvent<string>) => {
+    setSelectedRoom(event.target.value);
+    setSelectedTimeSlot("");
+  };
+
+  const handleAccordionRoomChange =
+    (domainRoom: string) =>
+    (event: React.SyntheticEvent, isExpanded: boolean) => {
+      setExpandedRooms((prev) => ({
+        ...prev,
+        [domainRoom]: isExpanded,
+      }));
+    };
+
   const isDateDisabled = (date: Date) => {
     return !ALLOWED_DATES.includes(format(date, "yyyy-MM-dd"));
   };
@@ -310,7 +339,11 @@ const PresenterHome = () => {
     }
 
     try {
-      console.log("??????????????");
+      if ('isSpecialSession' in selectedPaper) {
+        setError("Cannot select slot for special sessions");
+        return;
+      }
+
       const response = await axios.post("/papers/select-slot", {
         paperId: selectedPaper._id,
         date: format(selectedDate, "yyyy-MM-dd"),
@@ -352,27 +385,27 @@ const PresenterHome = () => {
     if (searchTermLower !== "") {
       switch (searchCriteria) {
         case "paperId":
-          matchesSearch = paper.paperId.toLowerCase().includes(searchTermLower);
+          matchesSearch = paper.paperId?.toLowerCase().includes(searchTermLower) || false;
           break;
         case "title":
           matchesSearch = paper.title.toLowerCase().includes(searchTermLower);
           break;
         case "presenter":
-          matchesSearch = paper.presenters.some(
+          matchesSearch = paper.presenters?.some(
             (p) =>
               p.name.toLowerCase().includes(searchTermLower) ||
               p.email.toLowerCase().includes(searchTermLower)
-          );
+          ) || false;
           break;
         default:
           matchesSearch =
-            paper.paperId.toLowerCase().includes(searchTermLower) ||
+            (paper.paperId?.toLowerCase().includes(searchTermLower) || false) ||
             paper.title.toLowerCase().includes(searchTermLower) ||
-            paper.presenters.some(
+            (paper.presenters?.some(
               (p) =>
                 p.name.toLowerCase().includes(searchTermLower) ||
                 p.email.toLowerCase().includes(searchTermLower)
-            );
+            ) || false);
       }
     }
 
@@ -382,19 +415,22 @@ const PresenterHome = () => {
   const groupedByDomain = filteredScheduledPapers.reduce((acc, paper) => {
     if (!paper.selectedSlot) return acc;
 
-    const { domain } = paper;
+    // Handle domain properly, using 'Special Sessions' for special sessions and 'Other' for undefined
+    const domain = paper.isSpecialSession 
+        ? 'Special Sessions'
+        : paper.domain || 'Other';
     const room = paper.selectedSlot.room;
 
     if (!acc[domain]) {
-      acc[domain] = {};
+        acc[domain] = {};
     }
     if (!acc[domain][room]) {
-      acc[domain][room] = [];
+        acc[domain][room] = [];
     }
 
     acc[domain][room].push(paper);
     return acc;
-  }, {} as { [domain: string]: { [room: string]: Paper[] } });
+  }, {} as { [domain: string]: { [room: string]: Event[] } });
 
   const handleScheduleDateChange = (date: Date | null) => {
     setScheduleViewDate(date);
@@ -777,7 +813,7 @@ const PresenterHome = () => {
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails sx={{ p: 2 }}>
-                  {Object.entries(rooms).map(([room, roomPapers]) => (
+                  {Object.entries(rooms).map(([room, roomEvents]) => (
                     <Accordion
                       key={`${domain}-${room}`}
                       expanded={expandedRooms[`${domain}-${room}`] || false}
@@ -794,26 +830,18 @@ const PresenterHome = () => {
                       <AccordionSummary
                         expandIcon={<ExpandMoreIcon />}
                         sx={{
-                          backgroundColor: alpha(
-                            theme.palette.primary.main,
-                            0.05
-                          ),
+                          backgroundColor: alpha(theme.palette.primary.main, 0.05),
                           "&:hover": {
-                            backgroundColor: alpha(
-                              theme.palette.primary.main,
-                              0.08
-                            ),
+                            backgroundColor: alpha(theme.palette.primary.main, 0.08),
                           },
                         }}
                         tabIndex={0}
                       >
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                           <RoomIcon color="primary" />
                           <Typography variant="h6">{room}</Typography>
                           <Chip
-                            label={`${roomPapers.length} Presentations`}
+                            label={`${roomEvents.length} Events`}
                             size="small"
                             sx={{ ml: 2 }}
                           />
@@ -821,105 +849,106 @@ const PresenterHome = () => {
                       </AccordionSummary>
                       <AccordionDetails sx={{ p: 2 }}>
                         <TableContainer>
-                          <Table
-                            size="medium"
-                            aria-label="presentation schedule"
-                          >
+                          <Table size="medium" aria-label="schedule">
                             <TableHead>
                               <TableRow>
-                                <StyledTableCell>Time Slot</StyledTableCell>
-                                <StyledTableCell>Paper ID</StyledTableCell>
+                                <StyledTableCell>Time</StyledTableCell>
                                 <StyledTableCell>Title</StyledTableCell>
-                                <StyledTableCell>Presenters</StyledTableCell>
+                                <StyledTableCell>Type</StyledTableCell>
+                                <StyledTableCell>Presenters/Speaker</StyledTableCell>
                                 <StyledTableCell>Status</StyledTableCell>
-                                <StyledTableCell align="right">
-                                  Actions
-                                </StyledTableCell>
+                                <StyledTableCell align="right">Actions</StyledTableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
-                              {roomPapers
-                                .sort((a, b) =>
-                                  (
-                                    a.selectedSlot?.timeSlot || ""
-                                  ).localeCompare(
-                                    b.selectedSlot?.timeSlot || ""
-                                  )
-                                )
-                                .map((paper) => (
-                                  <StyledTableRow key={paper._id}>
+                              {roomEvents
+                                .sort((a, b) => {
+                                  const timeA = a.isSpecialSession ? a.startTime : a.selectedSlot?.timeSlot;
+                                  const timeB = b.isSpecialSession ? b.startTime : b.selectedSlot?.timeSlot;
+                                  return (timeA || '').localeCompare(timeB || '');
+                                })
+                                .map((event) => (
+                                  <StyledTableRow 
+                                    key={event._id}
+                                    sx={{
+                                      backgroundColor: event.isSpecialSession 
+                                        ? alpha(theme.palette.secondary.main, 0.05)
+                                        : 'inherit',
+                                      '&:hover': {
+                                        backgroundColor: event.isSpecialSession
+                                          ? alpha(theme.palette.secondary.main, 0.08)
+                                          : alpha(theme.palette.primary.main, 0.04),
+                                      },
+                                    }}
+                                  >
                                     <StyledTableCell>
-                                      <Box
-                                        sx={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: 1,
-                                        }}
-                                      >
-                                        <ScheduleIcon
-                                          fontSize="small"
-                                          color="action"
-                                        />
-                                        {paper.selectedSlot?.timeSlot === 'Session 1' ? 'Session 1 (9:00 AM - 12:00 PM)' :
-                                         paper.selectedSlot?.timeSlot === 'Session 2' ? 'Session 2 (1:00 PM - 4:00 PM)' :
-                                         paper.selectedSlot?.timeSlot}
-                                      </Box>
-                                    </StyledTableCell>
-                                    <StyledTableCell>
-                                      {paper.paperId}
-                                    </StyledTableCell>
-                                    <StyledTableCell>
-                                      {paper.title}
-                                    </StyledTableCell>
-                                    <StyledTableCell>
-                                      <Box
-                                        sx={{
-                                          display: "flex",
-                                          flexDirection: "column",
-                                          gap: 0.5,
-                                        }}
-                                      >
-                                        {paper.presenters.map(
-                                          (presenter, index) => (
-                                            <Box
-                                              key={index}
-                                              sx={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: 0.5,
-                                              }}
-                                            >
-                                              <PersonIcon
-                                                fontSize="small"
-                                                color="action"
-                                              />
-                                              {presenter.name}
-                                            </Box>
-                                          )
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <ScheduleIcon fontSize="small" color="action" />
+                                        {event.isSpecialSession ? (
+                                          <>
+                                            {event.startTime} - {event.endTime}
+                                            <Chip
+                                              size="small"
+                                              label={event.sessionType}
+                                              color="secondary"
+                                              sx={{ ml: 1 }}
+                                            />
+                                          </>
+                                        ) : (
+                                          event.selectedSlot?.timeSlot === 'Session 1' 
+                                            ? 'Session 1 (9:00 AM - 12:00 PM)'
+                                            : 'Session 2 (1:00 PM - 4:00 PM)'
                                         )}
                                       </Box>
                                     </StyledTableCell>
                                     <StyledTableCell>
+                                      <Typography variant="body2">
+                                        {event.title}
+                                      </Typography>
+                                      {event.isSpecialSession && event.description && (
+                                        <Typography variant="caption" color="text.secondary" display="block">
+                                          {event.description}
+                                        </Typography>
+                                      )}
+                                    </StyledTableCell>
+                                    <StyledTableCell>
                                       <Chip
-                                        label={paper.presentationStatus}
                                         size="small"
-                                        sx={{
-                                          color: getStatusColor(
-                                            paper.presentationStatus,
-                                            theme
-                                          ),
-                                          bgcolor: getStatusBgColor(
-                                            paper.presentationStatus,
-                                            theme
-                                          ),
-                                          "&:hover": {
-                                            bgcolor: getStatusBgHoverColor(
-                                              paper.presentationStatus,
-                                              theme
-                                            ),
-                                          },
-                                        }}
+                                        label={event.isSpecialSession ? 'Special Session' : 'Presentation'}
+                                        color={event.isSpecialSession ? 'secondary' : 'primary'}
                                       />
+                                    </StyledTableCell>
+                                    <StyledTableCell>
+                                      {event.isSpecialSession ? (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                          <PersonIcon fontSize="small" color="action" />
+                                          {event.speaker}
+                                        </Box>
+                                      ) : (
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                          {event.presenters?.map((presenter, index) => (
+                                            <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                              <PersonIcon fontSize="small" color="action" />
+                                              {presenter.name}
+                                            </Box>
+                                          ))}
+                                        </Box>
+                                      )}
+                                    </StyledTableCell>
+                                    <StyledTableCell>
+                                      {!event.isSpecialSession && (
+                                        <Chip
+                                          label={event.presentationStatus}
+                                          size="small"
+                                          sx={{
+                                            color: getStatusColor(event.presentationStatus || 'Scheduled', theme),
+                                            bgcolor: getStatusBgColor(event.presentationStatus || 'Scheduled', theme),
+                                            '&:hover': {
+                                              bgcolor: getStatusBgHoverColor(event.presentationStatus || 'Scheduled', theme),
+                                            },
+                                          }}
+                                        />
+                                      )}
                                     </StyledTableCell>
                                     <StyledTableCell align="right">
                                       <Button
@@ -928,7 +957,7 @@ const PresenterHome = () => {
                                         onClick={(e) => {
                                           e.preventDefault();
                                           e.stopPropagation();
-                                          handleViewDetails(paper);
+                                          handleViewDetails(event);
                                         }}
                                         startIcon={<EventIcon />}
                                         tabIndex={0}

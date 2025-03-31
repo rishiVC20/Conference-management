@@ -9,16 +9,16 @@ import AttendeeHome from './pages/AttendeeHome';
 import AdminHome from './pages/AdminHome';
 import AdminDashboard from './pages/AdminDashboard';
 import AddPaper from './pages/AddPaper'; 
-import AddSession from './pages/AddSession';
-
 import ScheduleManager from './pages/ScheduleManager';
 import CommunicationCenter from './pages/CommunicationCenter';
 import PresenterManagement from './pages/PresenterManagement';
 import PrivateRoute from './components/PrivateRoute';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import AddSpecialSession from './pages/AddSpecialSession';
 
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
@@ -59,85 +59,87 @@ const App: React.FC = () => {
       <Router>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <AuthProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password/:token" element={<ResetPassword />} />
-              <Route
-                path="/presenter"
-                element={
-                  <PrivateRoute role="presenter">
-                    <PresenterHome />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/attendee"
-                element={
-                  <PrivateRoute role="attendee">
-                    <AttendeeHome />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <PrivateRoute role="admin">
-                    <AdminHome />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <PrivateRoute role="admin">
-                    <AdminDashboard />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/admin/schedule"
-                element={
-                  <PrivateRoute role="admin">
-                    <ScheduleManager />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/admin/communications"
-                element={
-                  <PrivateRoute role="admin">
-                    <CommunicationCenter />
-                  </PrivateRoute>
-                }
-              />
-               <Route
-                path="/admin/add-paper"
-                element={
-                  <PrivateRoute role="admin">
-                    <AddPaper />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/admin/add-session"
-                element={
-                  <PrivateRoute role="admin">
-                <AddSession />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/admin/presenters"
-                element={
-                  <PrivateRoute role="admin">
-                    <PresenterManagement />
-                  </PrivateRoute>
-                }
-              />
-              <Route path="/" element={<Login />} />
-            </Routes>
+            <NotificationProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
+                <Route
+                  path="/presenter"
+                  element={
+                    <PrivateRoute role="presenter">
+                      <PresenterHome />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/attendee"
+                  element={
+                    <PrivateRoute role="attendee">
+                      <AttendeeHome />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <PrivateRoute role="admin">
+                      <AdminHome />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/dashboard"
+                  element={
+                    <PrivateRoute role="admin">
+                      <AdminDashboard />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/schedule"
+                  element={
+                    <PrivateRoute role="admin">
+                      <ScheduleManager />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/communications"
+                  element={
+                    <PrivateRoute role="admin">
+                      <CommunicationCenter />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/add-paper"
+                  element={
+                    <PrivateRoute role="admin">
+                      <AddPaper />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/presenters"
+                  element={
+                    <PrivateRoute role="admin">
+                      <PresenterManagement />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/admin/add-special-session"
+                  element={
+                    <PrivateRoute role="admin">
+                      <AddSpecialSession />
+                    </PrivateRoute>
+                  }
+                />
+                <Route path="/" element={<Login />} />
+              </Routes>
+            </NotificationProvider>
           </AuthProvider>
         </LocalizationProvider>
       </Router>

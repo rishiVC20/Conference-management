@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
-const Paper = require('../models/Paper');
+const Paper = require('../models/paper');
 require('dotenv').config();
 
 const MONGODB_URI = 'mongodb+srv://dbUser:GwWt9zrVEgItoOjU@cluster0.j3lma.mongodb.net/conference-app?retryWrites=true&w=majority&appName=Cluster0';

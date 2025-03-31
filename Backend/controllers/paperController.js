@@ -1,4 +1,4 @@
-const Paper = require('../models/Paper');
+const Paper = require('../models/paper');
 const XLSX = require('xlsx');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
@@ -102,17 +102,16 @@ const transporter = nodemailer.createTransport({
 // Conference Management Team`
 //   };
 
-//   // 🐞 Log before sending
-//   console.log('Sending email to:', mailOptions.to);
+// 🐞 Log before sending
+// console.log('Sending email to:', mailOptions.to);
 
-//   // 🔍 Wrap in try-catch to log if failure occurs
-//   try {
-//     const info = await transporter.sendMail(mailOptions);
-//     console.log('Email sent successfully:', info.response);
-//   } catch (error) {
-//     console.error('❌ Error sending email:', error);
-//   }
-// };
+// 🔍 Wrap in try-catch to log if failure occurs
+// try {
+//   const info = await transporter.sendMail(mailOptions);
+//   console.log('Email sent successfully:', info.response);
+// } catch (error) {
+//   console.error('❌ Error sending email:', error);
+// }
 
 
 const sendSlotConfirmationEmail = async (paper) => {

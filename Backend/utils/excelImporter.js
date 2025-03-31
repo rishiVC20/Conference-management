@@ -1,5 +1,5 @@
 const xlsx = require('xlsx');
-const Paper = require('../models/Paper');
+const Paper = require('../models/paper');
 const mongoose = require('mongoose');
 
 const TIME_SLOTS = [

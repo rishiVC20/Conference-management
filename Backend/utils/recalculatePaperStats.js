@@ -1,5 +1,5 @@
 // utils/recalculatePaperStats.js
-const Paper = require('../models/Paper');
+const Paper = require('../models/paper');
 const PaperStats = require('../models/PaperStats');
 
 async function recalculatePaperStats() {

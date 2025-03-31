@@ -7,31 +7,46 @@ const specialSessionSchema = new mongoose.Schema({
   },
   speaker: {
     type: String,
-    default: '' // Optional, in case of cultural/inauguration sessions
-  },
-  date: {
-    type: Date,
     required: true
   },
   room: {
     type: String,
     required: true
   },
-  timeSlot: {
+  sessionType: {
+    type: String,
+    enum: ['Guest Lecture', 'Keynote Speech', 'Cultural Event', 'Workshop'],
+    required: true
+  },
+  date: {
+    type: Date,
+    required: true
+  },
+  startTime: {
     type: String,
     required: true
   },
-  type: {
+  endTime: {
     type: String,
-    enum: ['keynote', 'guest', 'cultural', 'inauguration', 'other'],
+    required: true
+  },
+  session: {
+    type: String,
+    enum: ['Session 1', 'Session 2'],
     required: true
   },
   description: {
     type: String,
-    default: ''
+    required: false
+  },
+  presentationStatus: {
+    type: String,
+    enum: ['Scheduled', 'In Progress', 'Presented', 'Cancelled'],
+    default: 'Scheduled'
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
+
+// Add index for efficient querying
+specialSessionSchema.index({ date: 1, room: 1, session: 1 });
 
 module.exports = mongoose.model('SpecialSession', specialSessionSchema);

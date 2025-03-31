@@ -1,61 +1,155 @@
 const SpecialSession = require('../models/SpecialSession');
+const Paper = require('../models/paper');
 
-// Add a special session (Admin only)
-exports.addSpecialSession = async (req, res) => {
+// Helper function to validate session time
+const validateSessionTime = (startTime, endTime) => {
+  const start = new Date(`1970-01-01T${startTime}`);
+  const end = new Date(`1970-01-01T${endTime}`);
+  
+  // Session 1: 9:00-12:00
+  const session1Start = new Date('1970-01-01T09:00');
+  const session1End = new Date('1970-01-01T12:00');
+  
+  // Session 2: 1:00-4:00
+  const session2Start = new Date('1970-01-01T13:00');
+  const session2End = new Date('1970-01-01T16:00');
+
+  if (start >= session1Start && end <= session1End) {
+    return 'Session 1';
+  }
+  if (start >= session2Start && end <= session2End) {
+    return 'Session 2';
+  }
+  return null;
+};
+
+// Add a new special session
+const addSpecialSession = async (req, res) => {
   try {
-    const { type, title, speaker, description, date, timeSlot, room } = req.body;
+    const { title, speaker, room, sessionType, date, startTime, endTime, description } = req.body;
 
-    if (!type || !title || !date || !timeSlot || !room) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    // Validate session time
+    const session = validateSessionTime(startTime, endTime);
+    if (!session) {
+      return res.status(400).json({
+        success: false,
+        message: 'Special session must be within Session 1 (9:00-12:00) or Session 2 (1:00-4:00)'
+      });
     }
 
+    // Check if there's any overlap with existing special sessions
     const existingSession = await SpecialSession.findOne({
       date,
-      timeSlot,
-      room
+      room,
+      session,
+      $or: [
+        {
+          startTime: { $lte: endTime },
+          endTime: { $gte: startTime }
+        }
+      ]
     });
 
     if (existingSession) {
       return res.status(409).json({
         success: false,
-        message: 'A session already exists at this time and room'
+        message: 'A special session already exists in this room during this time'
       });
     }
 
-    const newSession = await SpecialSession.create({
-      type,
+    const specialSession = new SpecialSession({
       title,
       speaker,
-      description,
+      room,
+      sessionType,
       date,
-      timeSlot,
-      room
+      startTime,
+      endTime,
+      session,
+      description
     });
+
+    await specialSession.save();
 
     res.status(201).json({
       success: true,
       message: 'Special session added successfully',
-      data: newSession
+      data: specialSession
     });
   } catch (error) {
     console.error('Error adding special session:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Error adding special session',
+      error: error.message
+    });
+  }
+};
+
+// Get special sessions by date
+const getSpecialSessionsByDate = async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Date is required'
+      });
+    }
+
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    const specialSessions = await SpecialSession.find({
+      date: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    }).sort({
+      startTime: 1
+    });
+
+    res.json({
+      success: true,
+      data: specialSessions
+    });
+  } catch (error) {
+    console.error('Error fetching special sessions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching special sessions',
+      error: error.message
     });
   }
 };
 
 // Get all special sessions
-exports.getSpecialSessions = async (req, res) => {
+const getAllSpecialSessions = async (req, res) => {
   try {
-    const sessions = await SpecialSession.find().sort({ date: 1, timeSlot: 1 });
-    res.status(200).json({ success: true, data: sessions });
+    const specialSessions = await SpecialSession.find().sort({
+      date: 1,
+      startTime: 1
+    });
+
+    res.json({
+      success: true,
+      data: specialSessions
+    });
   } catch (error) {
-    console.error('Error fetching special sessions:', error);
+    console.error('Error fetching all special sessions:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Error fetching special sessions',
+      error: error.message
     });
   }
+};
+
+module.exports = {
+  addSpecialSession,
+  getSpecialSessionsByDate,
+  getAllSpecialSessions
 };

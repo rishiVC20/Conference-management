@@ -9,7 +9,8 @@ const config = require('./config/config');
 const authRoutes = require('./routes/authRoutes');
 const paperRoutes = require('./routes/papers');
 const statsRoutes = require('./routes/statsRoutes');
-const specialSessionRoutes = require('./routes/specialSessionRoutes');
+const specialSessionRoutes = require('./routes/specialSessions');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 
 const app = express();
@@ -31,6 +32,7 @@ app.use('/api/special-sessions', specialSessionRoutes);
 
 
 app.use('/api/stats', statsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

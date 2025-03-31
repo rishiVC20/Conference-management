@@ -79,6 +79,14 @@ interface Paper {
     bookedBy?: string;
   };
   presentationStatus: 'Scheduled' | 'In Progress' | 'Presented' | 'Cancelled';
+  isSpecialSession?: boolean;
+  speaker?: string;
+  sessionType?: 'Guest Lecture' | 'Keynote Speech' | 'Cultural Event' | 'Workshop';
+  startTime?: string;
+  endTime?: string;
+  date?: string;
+  room?: string;
+  description?: string;
 }
 
 interface TimeSlot {
@@ -159,20 +167,55 @@ const AttendeeHome = () => {
       setLoading(true);
       setError(null);
       const formattedDate = format(date, 'yyyy-MM-dd');
-      const response = await axios.get<ApiResponse>('/papers/by-date', {
-        params: { date: formattedDate }
-      });
       
-      if (response.data.success) {
-        const papersByDomain = response.data.data;
-        const allPapers: Paper[] = [];
-        Object.values(papersByDomain).forEach(papers => {
-          allPapers.push(...papers);
-        });
-        setPapers(allPapers);
-      } else {
-        setError('Failed to fetch papers');
+      // Fetch both papers and special sessions
+      const [papersResponse, specialSessionsResponse] = await Promise.all([
+        axios.get<ApiResponse>('/papers/by-date', {
+          params: { date: formattedDate }
+        }),
+        axios.get<ApiResponse>('/special-sessions/by-date', {
+          params: { date: formattedDate }
+        })
+      ]);
+      
+      if (!papersResponse.data.success || !specialSessionsResponse.data.success) {
+        const errorMessage = papersResponse.data.message || specialSessionsResponse.data.message || 'Failed to fetch data';
+        setError(errorMessage);
+        return;
       }
+
+      const papersByDomain = papersResponse.data.data;
+      const specialSessions = specialSessionsResponse.data.data;
+      
+      // Convert special sessions to Paper format
+      const formattedSpecialSessions = Array.isArray(specialSessions) 
+        ? specialSessions.map(session => ({
+            ...session,
+            isSpecialSession: true,
+            paperId: `SS-${session._id}`,
+            domain: 'Special Sessions',
+            selectedSlot: {
+              date: session.date || '',
+              room: session.room || '',
+              timeSlot: session.session
+            }
+          }))
+        : [];
+      
+      // Combine papers and special sessions
+      const allPapers: Paper[] = [];
+      if (Array.isArray(papersByDomain)) {
+        allPapers.push(...papersByDomain);
+      } else if (typeof papersByDomain === 'object' && papersByDomain !== null) {
+        Object.values(papersByDomain).forEach(papers => {
+          if (Array.isArray(papers)) {
+            allPapers.push(...papers);
+          }
+        });
+      }
+      allPapers.push(...formattedSpecialSessions);
+      
+      setPapers(allPapers);
     } catch (err) {
       console.error('Error fetching papers:', err);
       setError('Failed to load papers. Please try again later.');
@@ -194,6 +237,18 @@ const AttendeeHome = () => {
   };
 
   const filteredPapers = papers.filter(paper => {
+    // First filter out duplicate special sessions
+    if (paper.isSpecialSession && papers.some(p => 
+      p.isSpecialSession && 
+      p._id !== paper._id && 
+      p.title === paper.title && 
+      p.room === paper.room && 
+      p.startTime && // Keep only the entry with specific time
+      !paper.startTime // Filter out the entry without specific time
+    )) {
+      return false;
+    }
+
     const matchesDomain = selectedDomain === 'All' || paper.domain === selectedDomain;
     const searchTermLower = searchTerm.toLowerCase().trim();
     
@@ -207,20 +262,26 @@ const AttendeeHome = () => {
           matchesSearch = paper.title.toLowerCase().includes(searchTermLower);
           break;
         case 'presenter':
-          matchesSearch = paper.presenters.some(p => 
-            p.name.toLowerCase().includes(searchTermLower) ||
-            p.email.toLowerCase().includes(searchTermLower)
-          );
+          if (paper.isSpecialSession) {
+            matchesSearch = paper.speaker?.toLowerCase().includes(searchTermLower) || false;
+          } else {
+            matchesSearch = paper.presenters.some(p => 
+              p.name.toLowerCase().includes(searchTermLower) ||
+              p.email.toLowerCase().includes(searchTermLower)
+            );
+          }
           break;
         default:
           // Default search across all fields
           matchesSearch = 
             paper.paperId.toLowerCase().includes(searchTermLower) ||
             paper.title.toLowerCase().includes(searchTermLower) ||
-            paper.presenters.some(p => 
-              p.name.toLowerCase().includes(searchTermLower) ||
-              p.email.toLowerCase().includes(searchTermLower)
-            );
+            (paper.isSpecialSession 
+              ? (paper.speaker?.toLowerCase().includes(searchTermLower) || false)
+              : paper.presenters.some(p => 
+                  p.name.toLowerCase().includes(searchTermLower) ||
+                  p.email.toLowerCase().includes(searchTermLower)
+                ));
       }
     }
     
@@ -230,14 +291,17 @@ const AttendeeHome = () => {
   const groupedByDomain = filteredPapers.reduce((acc, paper) => {
     if (!paper.selectedSlot) return acc;
     
-    const { domain } = paper;
+    // Handle domain properly, using 'Special Sessions' for special sessions and 'Other' for undefined
+    const domain = paper.isSpecialSession 
+        ? 'Special Sessions'
+        : paper.domain || 'Other';
     const room = paper.selectedSlot.room;
     
     if (!acc[domain]) {
-      acc[domain] = {};
+        acc[domain] = {};
     }
     if (!acc[domain][room]) {
-      acc[domain][room] = [];
+        acc[domain][room] = [];
     }
     
     acc[domain][room].push(paper);
@@ -516,33 +580,69 @@ const AttendeeHome = () => {
                                   <StyledTableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <ScheduleIcon fontSize="small" color="action" />
-                                      {paper.selectedSlot?.timeSlot}
+                                      {paper.isSpecialSession ? (
+                                        <>
+                                          {paper.startTime} - {paper.endTime}
+                                          <Chip
+                                            size="small"
+                                            label={paper.sessionType}
+                                            color="secondary"
+                                            sx={{ ml: 1 }}
+                                          />
+                                        </>
+                                      ) : (
+                                        paper.selectedSlot?.timeSlot && (
+                                          paper.selectedSlot.timeSlot.includes('-') 
+                                            ? paper.selectedSlot.timeSlot // Show specific time if it exists
+                                            : paper.selectedSlot.timeSlot === 'Session 1' 
+                                              ? '09:00 - 12:00'
+                                              : '13:00 - 16:00'
+                                        )
+                                      )}
                                     </Box>
                                   </StyledTableCell>
                                   <StyledTableCell>{paper.paperId}</StyledTableCell>
-                                  <StyledTableCell>{paper.title}</StyledTableCell>
                                   <StyledTableCell>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                      {paper.presenters.map((presenter, index) => (
-                                        <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                          <PersonIcon fontSize="small" color="action" />
-                                          {presenter.name}
-                                        </Box>
-                                      ))}
-                                    </Box>
+                                    <Typography variant="body2">
+                                      {paper.title}
+                                    </Typography>
+                                    {paper.isSpecialSession && paper.description && (
+                                      <Typography variant="caption" color="text.secondary" display="block">
+                                        {paper.description}
+                                      </Typography>
+                                    )}
                                   </StyledTableCell>
                                   <StyledTableCell>
-                                    <Chip
-                                      label={paper.presentationStatus}
-                                      size="small"
-                                      sx={{
-                                        color: getStatusColor(paper.presentationStatus),
-                                        bgcolor: getStatusBgColor(paper.presentationStatus),
-                                        '&:hover': {
-                                          bgcolor: getStatusBgHoverColor(paper.presentationStatus)
-                                        }
-                                      }}
-                                    />
+                                    {paper.isSpecialSession ? (
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <PersonIcon fontSize="small" color="action" />
+                                        {paper.speaker}
+                                      </Box>
+                                    ) : (
+                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        {paper.presenters.map((presenter, index) => (
+                                          <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <PersonIcon fontSize="small" color="action" />
+                                            {presenter.name}
+                                          </Box>
+                                        ))}
+                                      </Box>
+                                    )}
+                                  </StyledTableCell>
+                                  <StyledTableCell>
+                                    {!paper.isSpecialSession && (
+                                      <Chip
+                                        label={paper.presentationStatus}
+                                        size="small"
+                                        sx={{
+                                          color: getStatusColor(paper.presentationStatus),
+                                          bgcolor: getStatusBgColor(paper.presentationStatus),
+                                          '&:hover': {
+                                            bgcolor: getStatusBgHoverColor(paper.presentationStatus)
+                                          }
+                                        }}
+                                      />
+                                    )}
                                   </StyledTableCell>
                                   <StyledTableCell align="right">
                                     <Button
