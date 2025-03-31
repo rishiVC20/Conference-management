@@ -188,11 +188,22 @@ const PresenterHome = () => {
       });
 
       if (response.data.success) {
-        const papersByDomain = response.data.data as { [key: string]: Paper[] };
+        console.log("Scheduled papers response:", response.data);
+        const papersByDomain = response.data.data;
         const allPapers: Paper[] = [];
-        Object.values(papersByDomain).forEach((papers) => {
-          allPapers.push(...papers);
-        });
+        
+        // Convert the response data to array of papers
+        if (Array.isArray(papersByDomain)) {
+          allPapers.push(...papersByDomain);
+        } else {
+          Object.values(papersByDomain).forEach((papers: any) => {
+            if (Array.isArray(papers)) {
+              allPapers.push(...papers);
+            }
+          });
+        }
+        
+        console.log("Processed papers:", allPapers);
         setScheduledPapers(allPapers);
       }
     } catch (error) {
@@ -603,7 +614,9 @@ const PresenterHome = () => {
                                   <Chip
                                     size="small"
                                     icon={<ScheduleIcon />}
-                                    label={paper.selectedSlot.timeSlot}
+                                    label={paper.selectedSlot.timeSlot === 'Session 1' ? 
+                                      'Session 1 (9:00 AM - 12:00 PM)' : 
+                                      'Session 2 (1:00 PM - 4:00 PM)'}
                                     variant="outlined"
                                   />
                                   {paper.selectedSlot.bookedBy !==
@@ -628,8 +641,13 @@ const PresenterHome = () => {
                             <Button
                               variant="outlined"
                               size="small"
-                              onClick={() => handleViewDetails(paper)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleViewDetails(paper);
+                              }}
                               startIcon={<PersonIcon />}
+                              tabIndex={0}
                             >
                               View Details
                             </Button>
@@ -743,6 +761,7 @@ const PresenterHome = () => {
                       color: "white",
                     },
                   }}
+                  tabIndex={0}
                 >
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <DomainIcon sx={{ mr: 1 }} />
@@ -786,6 +805,7 @@ const PresenterHome = () => {
                             ),
                           },
                         }}
+                        tabIndex={0}
                       >
                         <Box
                           sx={{ display: "flex", alignItems: "center", gap: 1 }}
@@ -831,8 +851,8 @@ const PresenterHome = () => {
                                     <StyledTableCell>
                                       <Box
                                         sx={{
-                                          display: "flex",
-                                          alignItems: "center",
+                                          display: 'flex',
+                                          alignItems: 'center',
                                           gap: 1,
                                         }}
                                       >
@@ -840,7 +860,9 @@ const PresenterHome = () => {
                                           fontSize="small"
                                           color="action"
                                         />
-                                        {paper.selectedSlot?.timeSlot}
+                                        {paper.selectedSlot?.timeSlot === 'Session 1' ? 'Session 1 (9:00 AM - 12:00 PM)' :
+                                         paper.selectedSlot?.timeSlot === 'Session 2' ? 'Session 2 (1:00 PM - 4:00 PM)' :
+                                         paper.selectedSlot?.timeSlot}
                                       </Box>
                                     </StyledTableCell>
                                     <StyledTableCell>
@@ -904,10 +926,12 @@ const PresenterHome = () => {
                                         variant="outlined"
                                         size="small"
                                         onClick={(e) => {
+                                          e.preventDefault();
                                           e.stopPropagation();
                                           handleViewDetails(paper);
                                         }}
                                         startIcon={<EventIcon />}
+                                        tabIndex={0}
                                       >
                                         View Details
                                       </Button>
@@ -937,6 +961,8 @@ const PresenterHome = () => {
           onClose={handleCloseDialog}
           maxWidth="sm"
           fullWidth
+          keepMounted={false}
+          disablePortal={false}
           PaperProps={{
             sx: {
               borderRadius: 2,
