@@ -60,6 +60,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { alpha, styled, Theme } from '@mui/material/styles';
+import NotificationBell from '../components/NotificationBell';
 
 interface Paper {
   _id: string;
@@ -389,6 +390,7 @@ const AttendeeHome = () => {
             Conference Timetable
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <NotificationBell />
             <Typography variant="body2">
               {user?.email}
             </Typography>

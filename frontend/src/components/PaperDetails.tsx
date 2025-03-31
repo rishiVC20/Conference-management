@@ -112,6 +112,18 @@ const PaperDetails: React.FC<PaperDetailsProps> = ({ paper, open, onClose }) => 
     }
   };
 
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Date not set';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid date';
+      return format(date, 'dd MMM yyyy');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
@@ -174,24 +186,25 @@ const PaperDetails: React.FC<PaperDetailsProps> = ({ paper, open, onClose }) => 
               <Chip
                 size="small"
                 icon={<EventIcon />}
-                label={format(new Date(isEvent && event ? event.date! : regularPaper?.selectedSlot?.date || ''), 'dd MMM yyyy')}
+                label={formatDate(isEvent && event ? event.date : regularPaper?.selectedSlot?.date)}
                 variant="outlined"
               />
               <Chip
                 size="small"
                 icon={<RoomIcon />}
-                label={`Room ${isEvent && event ? event.room : regularPaper?.selectedSlot?.room || ''}`}
+                label={`Room ${isEvent && event ? event.room : regularPaper?.selectedSlot?.room || 'Not assigned'}`}
                 variant="outlined"
               />
               <Chip
                 size="small"
                 icon={<ScheduleIcon />}
                 label={isEvent && event
-                  ? `${event.startTime} - ${event.endTime}`
+                  ? `${event.startTime || 'TBD'} - ${event.endTime || 'TBD'}`
                   : regularPaper?.selectedSlot?.timeSlot === 'Session 1'
                     ? 'Session 1 (9:00 AM - 12:00 PM)'
-                    : 'Session 2 (1:00 PM - 4:00 PM)'
-                }
+                    : regularPaper?.selectedSlot?.timeSlot === 'Session 2'
+                    ? 'Session 2 (1:00 PM - 4:00 PM)'
+                    : 'Session not assigned'}
                 variant="outlined"
               />
             </Box>

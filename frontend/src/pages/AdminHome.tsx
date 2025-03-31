@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from '../config/axios';
-import NotificationBell from '../components/NotificationBell';
 import {
   Container,
   Typography,
@@ -63,6 +62,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { styled, Theme } from '@mui/material/styles';
 import { Link, useNavigate } from 'react-router-dom';
+import NotificationBell from '../components/NotificationBell';
 
 interface Paper {
   _id: string;
@@ -409,12 +409,12 @@ const AdminHome: React.FC = () => {
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
             Conference Schedule Management
-          </Typography>
+        </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <NotificationBell />
             <Typography variant="body2" sx={{ color: alpha(theme.palette.common.white, 0.8) }}>
               {user?.email}
-            </Typography>
+        </Typography>
             <IconButton color="inherit" onClick={handleLogout} size="small">
               <LogoutIcon />
             </IconButton>
@@ -564,7 +564,7 @@ const AdminHome: React.FC = () => {
                         <RoomIcon color="primary" />
                         <Typography variant="h6">
                           {room}
-                        </Typography>
+          </Typography>
                         <Chip 
                           label={`${roomPapers.length} Presentations`} 
                           size="small" 
@@ -587,7 +587,7 @@ const AdminHome: React.FC = () => {
                             {roomPapers
                               .sort((a, b) => (a.selectedSlot?.timeSlot || '').localeCompare(b.selectedSlot?.timeSlot || ''))
                               .map((paper) => (
-                                <StyledTableRow key={paper._id}>
+                                <StyledTableRow key={paper.isSpecialSession ? `SS-${paper._id}` : paper._id}>
                                   <StyledTableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <ScheduleIcon fontSize="small" color="action" />
@@ -740,7 +740,13 @@ const AdminHome: React.FC = () => {
                             <Typography variant="body2" color="text.secondary">
                               Room: {selectedPaper.selectedSlot?.room}
                               <br />
-                              Time: {selectedPaper.selectedSlot?.timeSlot}
+                              Time: {selectedPaper.isSpecialSession 
+                                ? `${selectedPaper.startTime} - ${selectedPaper.endTime}`
+                                : selectedPaper.selectedSlot?.timeSlot === 'Session 1'
+                                  ? 'Session 1 (9:00 AM - 12:00 PM)'
+                                  : selectedPaper.selectedSlot?.timeSlot === 'Session 2'
+                                    ? 'Session 2 (1:00 PM - 4:00 PM)'
+                                    : selectedPaper.selectedSlot?.timeSlot}
                             </Typography>
                           </Box>
                           <Box sx={{ mt: 2 }}>
@@ -775,13 +781,13 @@ const AdminHome: React.FC = () => {
               <DialogActions>
                 <Button onClick={handleCloseDetails}>
                   Close
-                </Button>
+        </Button>
               </DialogActions>
             </>
           )}
         </Dialog>
       </Container>
-    </Box>
+      </Box>
   );
 };
 

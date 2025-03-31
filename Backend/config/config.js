@@ -4,13 +4,16 @@ const config = {
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'your-secret-key',
-    expiresIn: '24h'
+    expiresIn: '30d'
   },
   cors: {
     origin: function(origin, callback) {
       const allowedOrigins = [
         'https://confpict.netlify.app',
-        'http://localhost:3000'
+        'http://localhost:3000',
+        'http://localhost:5000',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:5000'
       ];
       
       // Allow requests with no origin (like mobile apps or curl requests)
@@ -25,7 +28,21 @@ const config = {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: [
+      'Content-Type', 
+      'Authorization', 
+      'Cookie', 
+      'Accept',
+      'Origin',
+      'X-Requested-With'
+    ],
+    exposedHeaders: [
+      'Set-Cookie', 
+      'Authorization'
+    ],
+    maxAge: 86400,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   },
   port: process.env.PORT || 5000
 };

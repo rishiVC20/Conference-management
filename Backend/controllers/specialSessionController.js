@@ -1,5 +1,7 @@
 const SpecialSession = require('../models/SpecialSession');
 const Paper = require('../models/paper');
+const User = require('../models/User');
+const { createNotificationHelper } = require('./notificationController');
 
 // Helper function to validate session time
 const validateSessionTime = (startTime, endTime) => {
@@ -70,6 +72,33 @@ const addSpecialSession = async (req, res) => {
     });
 
     await specialSession.save();
+
+    // Create notifications for all attendees about the new special session
+    try {
+      const attendees = await User.find({ role: 'attendee' });
+      console.log('Found attendees:', attendees.length);
+      
+      const formattedDate = new Date(date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      for (const attendee of attendees) {
+        console.log('Creating notification for attendee:', attendee.email);
+        const notification = await createNotificationHelper({
+          title: 'New Special Session Added',
+          message: `A new ${sessionType} has been scheduled: "${title}" by ${speaker} in Room ${room} on ${formattedDate} from ${startTime} to ${endTime}`,
+          type: 'info',
+          recipient: attendee.email,
+          relatedTo: specialSession._id
+        });
+        console.log('Notification created for attendee:', notification);
+      }
+    } catch (notifError) {
+      console.error('Error creating notifications for attendees:', notifError);
+    }
 
     res.status(201).json({
       success: true,

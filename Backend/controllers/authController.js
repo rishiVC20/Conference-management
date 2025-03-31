@@ -4,13 +4,44 @@ const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 require('dotenv').config();
 
-
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRE = process.env.JWT_EXPIRE || '30d';
 
 const signToken = (id) => {
     return jwt.sign({ id }, JWT_SECRET, {
         expiresIn: JWT_EXPIRE
+    });
+};
+
+// Helper function to set cookie
+const sendTokenResponse = (user, statusCode, res) => {
+    const token = signToken(user._id);
+
+    const cookieOptions = {
+        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        domain: process.env.NODE_ENV === 'production' ? '.netlify.app' : 'localhost'
+    };
+
+    // Remove password from output
+    user.password = undefined;
+
+    // Set the cookie
+    res.cookie('jwt', token, cookieOptions);
+
+    // Set Authorization header
+    res.setHeader('Authorization', `Bearer ${token}`);
+
+    // Send response
+    res.status(statusCode).json({
+        success: true,
+        token,
+        data: {
+            user
+        }
     });
 };
 
@@ -73,7 +104,6 @@ exports.forgotPassword = async (req, res) => {
     res.status(200).json({ success: true, message: 'Password reset successful' });
   };
 
-
 exports.register = async (req, res) => {
     try {
         console.log('Registration request body:', req.body);
@@ -125,27 +155,8 @@ exports.register = async (req, res) => {
 
         console.log('User created successfully:', user);
 
-        // Create token
-        const token = signToken(user._id);
-
-        // Send token in cookie
-        res.cookie('jwt', token, {
-            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
-        });
-
-        // Remove password from output
-        user.password = undefined;
-
-        res.status(201).json({
-            success: true,
-            data: {
-                user,
-                token
-            }
-        });
+        // Send token response
+        sendTokenResponse(user, 201, res);
     } catch (error) {
         console.error('Registration error:', error);
         res.status(400).json({
@@ -168,7 +179,7 @@ exports.login = async (req, res) => {
         }
 
         // Check if user exists && password is correct
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).select('+password');
         if (!user || !(await user.comparePassword(password))) {
             return res.status(401).json({
                 success: false,
@@ -176,27 +187,8 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Create token
-        const token = signToken(user._id);
-
-        // Send token in cookie
-        res.cookie('jwt', token, {
-            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
-        });
-
-        // Remove password from output
-        user.password = undefined;
-
-        res.status(200).json({
-            success: true,
-            data: {
-                user,
-                token
-            }
-        });
+        // Send token response
+        sendTokenResponse(user, 200, res);
     } catch (error) {
         res.status(400).json({
             success: false,
@@ -206,20 +198,31 @@ exports.login = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
-    res.cookie('jwt', 'loggedout', {
-        expires: new Date(Date.now() + 10 * 1000),
+    const cookieOptions = {
+        expires: new Date(Date.now() + 10 * 1000), // 10 seconds
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
+        sameSite: 'lax',
+        path: '/',
+        domain: process.env.NODE_ENV === 'production' ? '.netlify.app' : 'localhost'
+    };
+
+    res.cookie('jwt', 'loggedout', cookieOptions);
+    res.removeHeader('Authorization');
+    
+    res.status(200).json({ 
+        success: true,
+        message: 'Logged out successfully'
     });
-    res.status(200).json({ success: true });
 };
 
 exports.me = async (req, res) => {
     try {
         let token;
-        if (req.cookies.jwt) {
+        if (req.cookies.jwt && req.cookies.jwt !== 'loggedout') {
             token = req.cookies.jwt;
+        } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            token = req.headers.authorization.split(' ')[1];
         }
 
         if (!token) {
@@ -229,24 +232,41 @@ exports.me = async (req, res) => {
             });
         }
 
-        // Verify token
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const user = await User.findById(decoded.id).select('-password');
+        try {
+            // Verify token
+            const decoded = jwt.verify(token, JWT_SECRET);
+            const user = await User.findById(decoded.id).select('-password');
 
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: {
-                user
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
             }
-        });
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    user,
+                },
+            });
+        } catch (error) {
+            if (error.name === 'JsonWebTokenError') {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid token'
+                });
+            }
+            if (error.name === 'TokenExpiredError') {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Token expired'
+                });
+            }
+            throw error;
+        }
     } catch (error) {
+        console.error('Auth error:', error);
         res.status(401).json({
             success: false,
             message: 'Not authorized to access this route'

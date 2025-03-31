@@ -57,6 +57,7 @@ import { Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import { styled, Theme } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
 import { Paper as PaperType, Presenter } from "../types/paper";
+import NotificationBell from "../components/NotificationBell";
 
 interface AvailableSlot {
   room: string;
@@ -504,6 +505,7 @@ const PresenterHome = () => {
             Presenter Dashboard
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <NotificationBell />
             <Typography variant="body2">{user?.email}</Typography>
             <IconButton color="inherit" onClick={handleLogout}>
               <LogoutIcon />
