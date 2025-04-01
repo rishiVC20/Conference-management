@@ -59,6 +59,7 @@ import { alpha } from "@mui/material/styles";
 import { Paper as PaperType, Presenter } from "../types/paper";
 import NotificationBell from "../components/NotificationBell";
 
+
 interface AvailableSlot {
   room: string;
   timeSlots: string[];
@@ -121,7 +122,7 @@ interface Event {
   selectedSlot?: {
     date: string;
     room: string;
-    timeSlot: string;
+    session: string;
     bookedBy?: string;
   };
   presenters?: Array<{
@@ -149,7 +150,7 @@ interface Paper {
   selectedSlot?: {
     date: string;
     room: string;
-    timeSlot: string;
+    session: string;
     bookedBy?: string;
   };
   presentationStatus: "Scheduled" | "In Progress" | "Presented" | "Cancelled";
@@ -190,6 +191,9 @@ const PresenterHome = () => {
   useEffect(() => {
     // Check if any paper has a booked slot
     const hasBookedSlot = papers.some((paper) => paper.selectedSlot?.bookedBy);
+    console.log("Has booked slot:", hasBookedSlot);
+    console.log("Booked paper:", papers.find((p) => p.selectedSlot?.bookedBy));
+
     setShowSchedule(hasBookedSlot);
 
     if (hasBookedSlot) {
@@ -652,7 +656,7 @@ const PresenterHome = () => {
                                   <Chip
                                     size="small"
                                     icon={<ScheduleIcon />}
-                                    label={paper.selectedSlot.timeSlot === 'Session 1' ? 
+                                    label={paper.selectedSlot.session === 'Session 1' ? 
                                       'Session 1 (9:00 AM - 12:00 PM)' : 
                                       'Session 2 (1:00 PM - 4:00 PM)'}
                                     variant="outlined"
@@ -865,8 +869,8 @@ const PresenterHome = () => {
                             <TableBody>
                               {roomEvents
                                 .sort((a, b) => {
-                                  const timeA = a.isSpecialSession ? a.startTime : a.selectedSlot?.timeSlot;
-                                  const timeB = b.isSpecialSession ? b.startTime : b.selectedSlot?.timeSlot;
+                                  const timeA = a.isSpecialSession ? a.startTime : a.selectedSlot?.session;
+                                  const timeB = b.isSpecialSession ? b.startTime : b.selectedSlot?.session;
                                   return (timeA || '').localeCompare(timeB || '');
                                 })
                                 .map((event) => (
@@ -897,7 +901,7 @@ const PresenterHome = () => {
                                             />
                                           </>
                                         ) : (
-                                          event.selectedSlot?.timeSlot === 'Session 1' 
+                                          event.selectedSlot?.session === 'Session 1' 
                                             ? 'Session 1 (9:00 AM - 12:00 PM)'
                                             : 'Session 2 (1:00 PM - 4:00 PM)'
                                         )}

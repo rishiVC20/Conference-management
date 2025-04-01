@@ -12,6 +12,7 @@ const { adminAddPaper } = require('../controllers/paperController');
 const { protect, authorize } = require('../middleware/auth');
 const SpecialSession = require('../models/SpecialSession');
 const { createNotificationHelper } = require('../controllers/notificationController');
+const { sendSlotConfirmationEmail } = require('../controllers/paperController');
 
 // Constants
 const PAPERS_PER_ROOM = 12;
@@ -23,6 +24,8 @@ const ALLOWED_DATES = [
 ];
 
 const CONFERENCE_DAYS = 3;
+const PAPERS_PER_SESSION = 6;
+
 
 const calculateRoomsPerDay = (paperCount) => {
   const papersPerDay = Math.ceil(paperCount / CONFERENCE_DAYS);
@@ -63,6 +66,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+
 router.get('/available-slots', async (req, res) => {
   try {
     const { domain, date } = req.query;
@@ -70,19 +74,19 @@ router.get('/available-slots', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Domain and date are required' });
     }
 
-    if (!ALLOWED_DATES.includes(date.split('T')[0])) {
+    const formattedDate = date.split('T')[0];
+    if (!ALLOWED_DATES.includes(formattedDate)) {
       return res.status(400).json({ 
         success: false, 
         message: 'Selected date is not available. Please choose from January 9-11, 2026' 
       });
     }
 
-    // Get special sessions for the date
-    const specialSessions = await SpecialSession.find({
-      date: new Date(date)
-    });
+    const specialSessions = await SpecialSession.find({ date: new Date(date) });
 
     const totalPapers = await Paper.countDocuments({ domain });
+    const papersPerDay = Math.ceil(totalPapers / CONFERENCE_DAYS);
+
     const roomsNeeded = calculateRoomsPerDay(totalPapers);
 
     const occupiedSlots = await Paper.find({
@@ -92,194 +96,52 @@ router.get('/available-slots', async (req, res) => {
       'selectedSlot.session': { $ne: '' }
     }).select('selectedSlot');
 
-    const rooms = Array.from({ length: roomsNeeded }, (_, i) => 
-      generateRoomName(domain, i + 1)
-    );
+    const papersByRoomAndSession = {};
+    occupiedSlots.forEach(paper => {
+      const { room, session } = paper.selectedSlot;
+      const key = `${room}_${session}`;
+      if (!papersByRoomAndSession[key]) {
+        papersByRoomAndSession[key] = 0;
+      }
+      papersByRoomAndSession[key]++;
+    });
+
+    const rooms = Array.from({ length: roomsNeeded }, (_, i) => generateRoomName(domain, i + 1));
 
     const availableSlots = rooms.map(room => {
-      // Get occupied slots for this room
-      const occupiedTimeSlotsForRoom = occupiedSlots
-        .filter(paper => paper.selectedSlot.room === room)
-        .map(paper => paper.selectedSlot.session);
+      const roomSpecialSessions = specialSessions.filter(s => s.room === room);
 
-      // Get special sessions for this room
-      const roomSpecialSessions = specialSessions.filter(
-        session => session.room === room
-      );
+      const slots = ['Session 1', 'Session 2'].map(session => {
+        const key = `${room}_${session}`;
+        const count = papersByRoomAndSession[key] || 0;
+        const isFull = count >= PAPERS_PER_SESSION;
+        const hasSpecialSession = roomSpecialSessions.some(s => s.session === session);
 
-      // Calculate available slots considering special sessions
-      const availableTimeSlots = TIME_SLOTS.filter(slot => {
-        // Check if slot is not occupied by regular presentations
-        const isOccupied = occupiedTimeSlotsForRoom.includes(slot);
-        
-        // Check if slot overlaps with any special session
-        const hasSpecialSession = roomSpecialSessions.some(specialSession => {
-          const slotStart = new Date(`1970-01-01T${slot.split(' - ')[0]}`);
-          const slotEnd = new Date(`1970-01-01T${slot.split(' - ')[1]}`);
-          const specialStart = new Date(`1970-01-01T${specialSession.startTime}`);
-          const specialEnd = new Date(`1970-01-01T${specialSession.endTime}`);
-          
-          return (slotStart >= specialStart && slotStart < specialEnd) ||
-                 (slotEnd > specialStart && slotEnd <= specialEnd);
-        });
-
-        return !isOccupied && !hasSpecialSession;
+        return {
+          session,
+          count,
+          isFull,
+          disabled: isFull || hasSpecialSession
+        };
       });
 
       return {
         room,
-        timeSlots: availableTimeSlots
+        slots
       };
-    }).filter(slot => slot.timeSlots.length > 0);
+    });
 
     res.json({
       success: true,
       data: {
         totalPapers,
+        papersPerDay,
         roomsNeeded,
         availableSlots
       }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-router.get('/by-date', async (req, res) => {
-  try {
-    const { date } = req.query;
-    console.log('Received date query:', date);
-
-    if (!date) {
-      return res.status(400).json({ success: false, message: 'Date is required' });
-    }
-
-    // Validate date format
-    const parsedDate = new Date(date);
-    console.log('Parsed date:', parsedDate);
-
-    if (isNaN(parsedDate.getTime())) {
-      console.log('Invalid date format received');
-      return res.status(400).json({ success: false, message: 'Invalid date format' });
-    }
-
-    // Check if date is in allowed range
-    const formattedDate = parsedDate.toISOString().split('T')[0];
-    console.log('Formatted date:', formattedDate);
-    console.log('Allowed dates:', ALLOWED_DATES);
-
-    if (!ALLOWED_DATES.includes(formattedDate)) {
-      console.log('Date not in allowed range:', formattedDate);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Selected date is not available. Please choose from January 9-11, 2026' 
-      });
-    }
-
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
-
-    console.log('Querying date range:', {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
-    });
-
-    // Get regular presentations
-    const papers = await Paper.find({
-      'selectedSlot.date': {
-        $gte: startDate,
-        $lte: endDate
-      },
-      'selectedSlot.room': { $ne: '' },
-      'selectedSlot.session': { $ne: '' }
-    }).sort({
-      'selectedSlot.session': 1,
-      'selectedSlot.room': 1
-    });
-
-    console.log('Found papers:', papers.length);
-    console.log('Paper query result:', JSON.stringify(papers, null, 2));
-
-    // Get special sessions
-    const specialSessions = await SpecialSession.find({
-      date: {
-        $gte: startDate,
-        $lte: endDate
-      }
-    }).sort({
-      startTime: 1
-    });
-
-    console.log('Found special sessions:', specialSessions.length);
-    console.log('Special sessions query result:', JSON.stringify(specialSessions, null, 2));
-
-    // Combine and sort all events
-    const allEvents = [
-      ...papers.map(paper => ({
-        ...paper.toObject(),
-        isSpecialSession: false,
-        eventType: 'presentation',
-        selectedSlot: {
-          ...paper.selectedSlot,
-          timeSlot: paper.selectedSlot?.session || ''
-        }
-      })),
-      ...specialSessions.map(session => ({
-        ...session.toObject(),
-        isSpecialSession: true,
-        eventType: 'special',
-        _id: session._id,
-        title: session.title,
-        speaker: session.speaker,
-        room: session.room,
-        sessionType: session.sessionType,
-        startTime: session.startTime || '',
-        endTime: session.endTime || '',
-        session: session.session || '',
-        description: session.description,
-        selectedSlot: {
-          date: session.date || '',
-          room: session.room || '',
-          timeSlot: session.session || ''
-        }
-      }))
-    ].sort((a, b) => {
-      // Get time values with fallbacks
-      const timeA = a.isSpecialSession ? (a.startTime || '') : (a.selectedSlot?.timeSlot || '');
-      const timeB = b.isSpecialSession ? (b.startTime || '') : (b.selectedSlot?.timeSlot || '');
-      
-      // If both times are empty, sort by title
-      if (!timeA && !timeB) {
-        return a.title.localeCompare(b.title);
-      }
-      // If one time is empty, put it at the end
-      if (!timeA) return 1;
-      if (!timeB) return -1;
-      
-      return timeA.localeCompare(timeB);
-    });
-
-    console.log('Combined events:', allEvents.length);
-
-    res.json({
-      success: true,
-      data: allEvents
-    });
-  } catch (error) {
-    console.error('Detailed error in /by-date route:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error fetching papers and special sessions',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
   }
 });
 
@@ -304,6 +166,30 @@ router.get('/presenter', async (req, res) => {
   } catch (error) {
     console.error('Error fetching presenter papers:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+
+router.get('/by-date', async (req, res) => {
+  const { date } = req.query;
+  if (!date) {
+    return res.status(400).json({ success: false, message: 'Date is required' });
+  }
+  try {
+    const targetDate = new Date(date);
+
+    const papers = await Paper.find({ 'selectedSlot.date': targetDate });
+    const specialSessions = await SpecialSession.find({ date: targetDate });
+
+    const mergedEvents = [
+      ...papers.map(p => ({ ...p.toObject(), eventType: 'presentation' })),
+      ...specialSessions.map(s => ({ ...s.toObject(), isSpecialSession: true, eventType: 'special' }))
+    ];
+
+    res.json({ success: true, data: mergedEvents });
+  } catch (error) {
+    console.error('❌ Error fetching papers by date:', error);
+    res.status(500).json({ success: false, message: 'Server error fetching papers by date' });
   }
 });
 
@@ -335,9 +221,10 @@ router.post('/select-slot', async (req, res) => {
         selectedSlot: {
           date,
           room,
-          timeSlot: session,
-          bookedBy: presenterEmail
-        }
+          session,
+          bookedBy: presenterEmail,
+        },
+        isSlotAllocated: true,
       },
       { new: true }
     );
@@ -390,6 +277,9 @@ router.post('/select-slot', async (req, res) => {
     } catch (notifError) {
       console.error('Error creating notifications for admins:', notifError);
     }
+
+    await sendSlotConfirmationEmail(updated);
+
 
     res.json({
       success: true,
@@ -520,5 +410,34 @@ router.patch('/:id/presentation-status', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+
+// PATCH /api/papers/:id/reported
+router.patch('/:id/reported', protect, authorize('admin'), async (req, res) => {
+  const { reported } = req.body;
+
+  if (typeof reported !== 'boolean') {
+    return res.status(400).json({ success: false, message: 'Reported status must be true or false' });
+  }
+
+  try {
+    const paper = await Paper.findByIdAndUpdate(
+      req.params.id,
+      { reported },
+      { new: true }
+    );
+
+    if (!paper) {
+      return res.status(404).json({ success: false, message: 'Paper not found' });
+    }
+
+    res.json({ success: true, data: paper, message: 'Reported status updated' });
+  } catch (err) {
+    console.error('❌ Error updating reported status:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
 
 module.exports = router;

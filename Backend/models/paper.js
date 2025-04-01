@@ -46,6 +46,10 @@ const paperSchema = new mongoose.Schema({
     type: String,
     enum: ['Scheduled', 'In Progress', 'Presented', 'Cancelled'],
     default: 'Scheduled'
+  },
+  reported: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true, collection: 'papers' });
 

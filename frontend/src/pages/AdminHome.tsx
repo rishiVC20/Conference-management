@@ -56,6 +56,7 @@ import {
   People as PeopleIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
+import { Checkbox } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -82,6 +83,7 @@ interface Paper {
     bookedBy?: string;
   };
   presentationStatus: 'Scheduled' | 'In Progress' | 'Presented' | 'Cancelled';
+  reported?: boolean;
   isSpecialSession?: boolean;
   speaker?: string;
   sessionType?: 'Guest' | 'Keynote' | 'Cultural';
@@ -318,6 +320,30 @@ const AdminHome: React.FC = () => {
   const handleCloseDetails = () => {
     setDetailsDialogOpen(false);
     setSelectedPaper(null);
+  };
+
+
+  const handleReportedChange = async (
+    paperId: string,
+    value: boolean,
+    setPapers: React.Dispatch<React.SetStateAction<Paper[]>>,
+    setError: React.Dispatch<React.SetStateAction<string | null>>
+  ) => {
+    try {
+      const response = await axios.patch(`/papers/${paperId}/reported`, {
+        reported: value,
+      });
+  
+      if (response.data.success) {
+        setPapers(prev =>
+          prev.map(p => p._id === paperId ? { ...p, reported: value } : p)
+        );
+      } else {
+        setError(response.data.message || 'Failed to update reported status');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error updating reported status');
+    }
   };
 
   const handleStatusChange = async (paperId: string, newStatus: Paper['presentationStatus']) => {
@@ -579,7 +605,8 @@ const AdminHome: React.FC = () => {
                               <StyledTableCell>ID</StyledTableCell>
                               <StyledTableCell>Title</StyledTableCell>
                               <StyledTableCell>Presenters/Speaker</StyledTableCell>
-                              <StyledTableCell>Status</StyledTableCell>
+                              <StyledTableCell>Reporting Status</StyledTableCell>
+                              <StyledTableCell>Presentation Status</StyledTableCell>
                               <StyledTableCell align="right">Actions</StyledTableCell>
                             </TableRow>
                           </TableHead>
@@ -613,40 +640,69 @@ const AdminHome: React.FC = () => {
                                       </Box>
                                     )}
                                   </StyledTableCell>
+
+
                                   <StyledTableCell>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <FormControlLabel
-                                        control={
-                                          <Switch
-                                            checked={paper.presentationStatus === 'Presented'}
-                                            onChange={(e) => handleStatusChange(
-                                              paper.isSpecialSession ? `SS-${paper._id}` : paper._id,
-                                              e.target.checked ? 'Presented' : 'Scheduled'
-                                            )}
-                                            disabled={updatingStatus === (paper.isSpecialSession ? `SS-${paper._id}` : paper._id)}
-                                            color="success"
-                                            size="small"
-                                          />
-                                        }
-                                        label=""
-                                      />
-                                      {updatingStatus === (paper.isSpecialSession ? `SS-${paper._id}` : paper._id) ? (
-                                        <CircularProgress size={20} />
-                                      ) : (
-                                        <Chip
-                                          label={paper.presentationStatus || 'Scheduled'}
-                                          size="small"
-                                          sx={{
-                                            color: getStatusColor(paper.presentationStatus || 'Scheduled', theme),
-                                            bgcolor: getStatusBgColor(paper.presentationStatus || 'Scheduled', theme),
-                                            '&:hover': {
-                                              bgcolor: getStatusBgHoverColor(paper.presentationStatus || 'Scheduled', theme)
-                                            }
-                                          }}
-                                        />
-                                      )}
-                                    </Box>
-                                  </StyledTableCell>
+  <FormControlLabel
+    control={
+      <Switch
+        checked={paper.reported || false}
+        onChange={(e) =>
+          handleReportedChange(paper._id, e.target.checked, setPapers, setError)
+        }
+        color="primary"
+        size="small"
+      />
+    }
+    label={
+      <Typography variant="body2" color="text.secondary">
+        {paper.reported ? 'Reported' : 'Not Reported'}
+      </Typography>
+    }
+    labelPlacement="end" 
+  />
+</StyledTableCell>
+
+<StyledTableCell>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <FormControlLabel
+      control={
+        <Checkbox
+          checked={paper.presentationStatus === 'Presented'}
+          onChange={(e) =>
+            handleStatusChange(
+              paper.isSpecialSession ? `SS-${paper._id}` : paper._id,
+              e.target.checked ? 'Presented' : 'Scheduled'
+            )
+          }
+          disabled={
+            updatingStatus ===
+            (paper.isSpecialSession ? `SS-${paper._id}` : paper._id)
+          }
+          color="success"
+        />
+      }
+      label="Presented"
+    />
+
+    {updatingStatus === (paper.isSpecialSession ? `SS-${paper._id}` : paper._id) ? (
+      <CircularProgress size={20} />
+    ) : (
+      <Chip
+        label={paper.presentationStatus || 'Scheduled'}
+        size="small"
+        sx={{
+          color: getStatusColor(paper.presentationStatus || 'Scheduled', theme),
+          bgcolor: getStatusBgColor(paper.presentationStatus || 'Scheduled', theme),
+          '&:hover': {
+            bgcolor: getStatusBgHoverColor(paper.presentationStatus || 'Scheduled', theme)
+          }
+        }}
+      />
+    )}
+  </Box>
+</StyledTableCell>
+
                                   <StyledTableCell align="right">
                                     <Button
                                       variant="outlined"

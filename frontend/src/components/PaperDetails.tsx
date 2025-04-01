@@ -37,7 +37,7 @@ interface Paper {
   selectedSlot?: {
     date: string;
     room: string;
-    timeSlot: string;
+    session: string;
     bookedBy?: string;
   };
   presentationStatus?: 'Scheduled' | 'In Progress' | 'Presented' | 'Cancelled';
@@ -72,7 +72,7 @@ interface Event {
   selectedSlot?: {
     date: string;
     room: string;
-    timeSlot: string;
+    session: string;
     bookedBy?: string;
   };
   presenters?: Presenter[];
@@ -200,9 +200,9 @@ const PaperDetails: React.FC<PaperDetailsProps> = ({ paper, open, onClose }) => 
                 icon={<ScheduleIcon />}
                 label={isEvent && event
                   ? `${event.startTime || 'TBD'} - ${event.endTime || 'TBD'}`
-                  : regularPaper?.selectedSlot?.timeSlot === 'Session 1'
+                  : regularPaper?.selectedSlot?.session === 'Session 1'
                     ? 'Session 1 (9:00 AM - 12:00 PM)'
-                    : regularPaper?.selectedSlot?.timeSlot === 'Session 2'
+                    : regularPaper?.selectedSlot?.session === 'Session 2'
                     ? 'Session 2 (1:00 PM - 4:00 PM)'
                     : 'Session not assigned'}
                 variant="outlined"

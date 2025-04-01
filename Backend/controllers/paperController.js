@@ -2,14 +2,7 @@ const Paper = require('../models/paper');
 const XLSX = require('xlsx');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
-const { generateTeamId } = require('../utils/excelImporter');
-
-const generatePaperId = (domain, count) => {
-  const domainPrefix = domain.substring(0, 3).toUpperCase();
-  const year = new Date().getFullYear();
-  const sequence = String(count + 1).padStart(3, '0');
-  return `${domainPrefix}${year}${sequence}`;
-};
+const { generatePaperId } = require('../utils/excelImporter');
 
 const importPapers = async (req, res) => {
   try {
@@ -34,7 +27,7 @@ const importPapers = async (req, res) => {
       const domain = row.domain;
       domainCounts[domain] = domainCounts[domain] || 0;
 
-      const paperId = generatePaperId(domain, domainCounts[domain]);
+      const paperId = await generatePaperId(domain);
       domainCounts[domain]++;
 
       const paper = {
@@ -75,48 +68,9 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// const sendSlotConfirmationEmail = async (paper) => {
-//   const { presenters, title, domain, selectedSlot } = paper;
-//   const { date, room, timeSlot } = selectedSlot;
-//   const formattedDate = new Date(date).toLocaleDateString();
-
-//   const mailOptions = {
-//     from: process.env.MAIL_USER,
-//     to: presenters.map(p => p.email),
-//     subject: `Slot Confirmation for Paper: ${title}`,
-//     text: `Dear Presenter(s),
-
-// Your presentation slot has been confirmed for the following paper:
-
-// Title: ${title}
-// Domain: ${domain}
-// Date: ${formattedDate}
-// Room: ${room}
-// Time Slot: ${timeSlot}
-
-// Please be present at least 15 minutes before your scheduled time.
-
-// This is an auto-generated message. Please do not reply.
-
-// Regards,
-// Conference Management Team`
-//   };
-
-// 🐞 Log before sending
-// console.log('Sending email to:', mailOptions.to);
-
-// 🔍 Wrap in try-catch to log if failure occurs
-// try {
-//   const info = await transporter.sendMail(mailOptions);
-//   console.log('Email sent successfully:', info.response);
-// } catch (error) {
-//   console.error('❌ Error sending email:', error);
-// }
-
-
 const sendSlotConfirmationEmail = async (paper) => {
   const { presenters, title, domain, selectedSlot } = paper;
-  const { date, room, session } = selectedSlot; // session replaces timeSlot
+  const { date, room, session } = selectedSlot;
   const formattedDate = new Date(date).toLocaleDateString();
 
   const mailOptions = {
@@ -149,17 +103,15 @@ Conference Management Team`
   }
 };
 
-
 const selectSlot = async (req, res) => {
   try {
-    const { paperId, date, room, session, presenterEmail } = req.body; // session replaces timeSlot
+    const { paperId, date, room, session, presenterEmail } = req.body;
 
     const paper = await Paper.findById(paperId);
     if (!paper) {
       return res.status(404).json({ success: false, message: 'Paper not found' });
     }
-    console.log(":::::::::::::::::::::");
-    // Ensure no more than 6 bookings per session in a room
+
     const sessionCount = await Paper.countDocuments({
       'selectedSlot.date': date,
       'selectedSlot.room': room,
@@ -173,14 +125,13 @@ const selectSlot = async (req, res) => {
       });
     }
 
-    // Update paper with session instead of time slot
     const updated = await Paper.findOneAndUpdate(
       { _id: paperId },
       {
         selectedSlot: {
           date,
           room,
-          session, // Store "Session 1" or "Session 2"
+          session,
           bookedBy: presenterEmail
         }
       },
@@ -211,25 +162,21 @@ const selectSlot = async (req, res) => {
   }
 };
 
-
-
 const adminAddPaper = async (req, res) => {
   try {
     const { title, domain, synopsis, presenters } = req.body;
 
-    // Basic validation
     if (!title || !domain || !synopsis || !Array.isArray(presenters) || presenters.length === 0) {
       return res.status(400).json({ success: false, message: 'All fields are required including at least one presenter.' });
     }
-    
-    const teamId = await generateTeamId(domain);
+
+    const paperId = await generatePaperId(domain);
 
     const newPaper = new Paper({
       title,
       domain,
       synopsis,
-      paperId: teamId,
-      teamId: teamId,
+      paperId,
       presenters,
       selectedSlot: {
         date: null,
@@ -251,9 +198,9 @@ const adminAddPaper = async (req, res) => {
   }
 };
 
-
 module.exports = {
   importPapers,
   selectSlot,
-  adminAddPaper
+  adminAddPaper,
+  sendSlotConfirmationEmail
 };
