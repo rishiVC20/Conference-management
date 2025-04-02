@@ -76,7 +76,7 @@ interface Paper {
   selectedSlot?: {
     date: string;
     room: string;
-    timeSlot: string;
+    session: string;
     bookedBy?: string;
   };
   presentationStatus: 'Scheduled' | 'In Progress' | 'Presented' | 'Cancelled';
@@ -150,12 +150,10 @@ const AttendeeHome = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string>('All');
-  const [searchTerm, setSearchTerm] = useState('');
   const [expandedDomain, setExpandedDomain] = useState<string | false>(false);
   const [expandedRooms, setExpandedRooms] = useState<{ [key: string]: boolean }>({});
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>('default');
 
   useEffect(() => {
     if (selectedDate) {
@@ -239,56 +237,21 @@ const AttendeeHome = () => {
 
   const filteredPapers = papers.filter(paper => {
     // First filter out duplicate special sessions
-    if (paper.isSpecialSession && papers.some(p => 
-      p.isSpecialSession && 
-      p._id !== paper._id && 
-      p.title === paper.title && 
-      p.room === paper.room && 
-      p.startTime && // Keep only the entry with specific time
-      !paper.startTime // Filter out the entry without specific time
+    if (paper.isSpecialSession && papers.some(p =>
+      p.isSpecialSession &&
+      p._id !== paper._id &&
+      p.title === paper.title &&
+      p.room === paper.room &&
+      p.startTime &&
+      !paper.startTime
     )) {
       return false;
     }
-
-    const matchesDomain = selectedDomain === 'All' || paper.domain === selectedDomain;
-    const searchTermLower = searchTerm.toLowerCase().trim();
-    
-    let matchesSearch = true;
-    if (searchTerm !== '') {
-      switch (searchCriteria) {
-        case 'paperId':
-          matchesSearch = paper.paperId.toLowerCase().includes(searchTermLower);
-          break;
-        case 'title':
-          matchesSearch = paper.title.toLowerCase().includes(searchTermLower);
-          break;
-        case 'presenter':
-          if (paper.isSpecialSession) {
-            matchesSearch = paper.speaker?.toLowerCase().includes(searchTermLower) || false;
-          } else {
-            matchesSearch = paper.presenters.some(p => 
-              p.name.toLowerCase().includes(searchTermLower) ||
-              p.email.toLowerCase().includes(searchTermLower)
-            );
-          }
-          break;
-        default:
-          // Default search across all fields
-          matchesSearch = 
-            paper.paperId.toLowerCase().includes(searchTermLower) ||
-            paper.title.toLowerCase().includes(searchTermLower) ||
-            (paper.isSpecialSession 
-              ? (paper.speaker?.toLowerCase().includes(searchTermLower) || false)
-              : paper.presenters.some(p => 
-                  p.name.toLowerCase().includes(searchTermLower) ||
-                  p.email.toLowerCase().includes(searchTermLower)
-                ));
-      }
-    }
-    
-    return matchesDomain && matchesSearch;
+  
+    // Only filter by domain now
+    return selectedDomain === 'All' || paper.domain === selectedDomain;
   });
-
+  
   const groupedByDomain = filteredPapers.reduce((acc, paper) => {
     if (!paper.selectedSlot) return acc;
     
@@ -426,37 +389,6 @@ const AttendeeHome = () => {
             </LocalizationProvider>
           </Grid>
           <Grid item xs={12} md={4}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel>Search By</InputLabel>
-                <Select
-                  value={searchCriteria}
-                  label="Search By"
-                  onChange={(e) => setSearchCriteria(e.target.value as SearchCriteria)}
-                >
-                  <MenuItem value="default">All Fields</MenuItem>
-                  <MenuItem value="paperId">Paper ID</MenuItem>
-                  <MenuItem value="title">Title</MenuItem>
-                  <MenuItem value="presenter">Presenter</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                fullWidth
-                size="small"
-                label={`Search by ${searchCriteria === 'default' ? 'all fields' : searchCriteria}`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={4}>
             <FormControl fullWidth size="small">
               <InputLabel>Domain</InputLabel>
               <Select
@@ -576,7 +508,7 @@ const AttendeeHome = () => {
                           </TableHead>
                           <TableBody>
                             {roomPapers
-                              .sort((a, b) => (a.selectedSlot?.timeSlot || '').localeCompare(b.selectedSlot?.timeSlot || ''))
+                              .sort((a, b) => (a.selectedSlot?.session || '').localeCompare(b.selectedSlot?.session || ''))
                               .map((paper) => (
                                 <StyledTableRow key={paper._id}>
                                   <StyledTableCell>
@@ -593,10 +525,10 @@ const AttendeeHome = () => {
                                           />
                                         </>
                                       ) : (
-                                        paper.selectedSlot?.timeSlot && (
-                                          paper.selectedSlot.timeSlot.includes('-') 
-                                            ? paper.selectedSlot.timeSlot // Show specific time if it exists
-                                            : paper.selectedSlot.timeSlot === 'Session 1' 
+                                        paper.selectedSlot?.session && (
+                                          paper.selectedSlot.session.includes('-') 
+                                            ? paper.selectedSlot.session // Show specific time if it exists
+                                            : paper.selectedSlot.session === 'Session 1' 
                                               ? '09:00 - 12:00'
                                               : '13:00 - 16:00'
                                         )
@@ -712,7 +644,7 @@ const AttendeeHome = () => {
                           />
                           <Chip
                             icon={<ScheduleIcon />}
-                            label={selectedPaper.selectedSlot.timeSlot}
+                            label={selectedPaper.selectedSlot.session}
                           />
                           <Chip
                             icon={<EventIcon />}
@@ -724,24 +656,33 @@ const AttendeeHome = () => {
                   </Grid>
 
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" color="primary" gutterBottom>
-                      Presenters
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      {selectedPaper.presenters.map((presenter, index) => (
-                        <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                          <PersonIcon color="action" fontSize="small" />
-                          <Typography>{presenter.name}</Typography>
-                          {presenter.email && (
-                            <>
-                              <Typography color="textSecondary" sx={{ mx: 1 }}>•</Typography>
-                              <Typography color="textSecondary">{presenter.email}</Typography>
-                            </>
-                          )}
-                        </Box>
-                      ))}
-                    </Box>
-                  </Grid>
+  <Typography variant="subtitle1" color="primary" gutterBottom>
+    {selectedPaper.isSpecialSession ? "Speaker" : "Presenters"}
+  </Typography>
+
+  {selectedPaper.isSpecialSession ? (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <PersonIcon color="action" fontSize="small" />
+      <Typography>{selectedPaper.speaker || "N/A"}</Typography>
+    </Box>
+  ) : (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {selectedPaper.presenters?.map((presenter, index) => (
+        <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <PersonIcon color="action" fontSize="small" />
+          <Typography>{presenter.name}</Typography>
+          {presenter.email && (
+            <>
+              <Typography color="textSecondary" sx={{ mx: 1 }}>•</Typography>
+              <Typography color="textSecondary">{presenter.email}</Typography>
+            </>
+          )}
+        </Box>
+      ))}
+    </Box>
+  )}
+</Grid>
+
 
                   <Grid item xs={12}>
                     <Typography variant="subtitle1" color="primary" gutterBottom>
@@ -750,20 +691,6 @@ const AttendeeHome = () => {
                     <Typography variant="body1" paragraph>
                       {selectedPaper.synopsis}
                     </Typography>
-                  </Grid>
-
-                  <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="subtitle2" color="textSecondary">
-                        Paper ID:
-                      </Typography>
-                      <Chip 
-                        size="small" 
-                        icon={<AssignmentIcon />}
-                        label={selectedPaper.paperId}
-                        color="secondary"
-                      />
-                    </Box>
                   </Grid>
                 </Grid>
               </DialogContent>

@@ -16,6 +16,8 @@ import PrivateRoute from './components/PrivateRoute';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AddSpecialSession from './pages/AddSpecialSession';
+import DomainPaperChart from './pages/DomainPaperChart';
+
 
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -81,6 +83,7 @@ const App: React.FC = () => {
                     </PrivateRoute>
                   }
                 />
+                <Route path="/chart-test" element={<DomainPaperChart />} />
                 <Route
                   path="/admin"
                   element={

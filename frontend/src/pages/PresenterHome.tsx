@@ -849,6 +849,7 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
                               <TableRow>
                                 <StyledTableCell>Time</StyledTableCell>
                                 <StyledTableCell>Title</StyledTableCell>
+                                <StyledTableCell>Paper-ID</StyledTableCell>
                                 <StyledTableCell>Type</StyledTableCell>
                                 <StyledTableCell>Presenters/Speaker</StyledTableCell>
                                 <StyledTableCell>Status</StyledTableCell>
@@ -906,6 +907,9 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
                                         </Typography>
                                       )}
                                     </StyledTableCell>
+                                    <StyledTableCell>
+    {event.paperId || 'N/A'}
+  </StyledTableCell>
                                     <StyledTableCell>
                                       <Chip
                                         size="small"

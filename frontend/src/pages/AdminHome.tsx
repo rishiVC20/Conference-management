@@ -79,7 +79,7 @@ interface Paper {
   selectedSlot?: {
     date: string;
     room: string;
-    timeSlot: string;
+    session: string;
     bookedBy?: string;
   };
   presentationStatus: 'Scheduled' | 'In Progress' | 'Presented' | 'Cancelled';
@@ -283,7 +283,7 @@ const AdminHome: React.FC = () => {
 
   const groupedByDomain = filteredPapers.reduce((acc, paper) => {
     if (!paper.selectedSlot) return acc;
-    
+
     // Handle domain properly, using 'Special Sessions' for special sessions and 'Other' for undefined
     const domain = paper.isSpecialSession 
         ? 'Special Sessions'
@@ -507,21 +507,32 @@ const AdminHome: React.FC = () => {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={4}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Select Date"
-                  value={selectedDate}
-                  onChange={handleDateChange}
-                  shouldDisableDate={isDateDisabled}
-                  sx={{ width: '100%' }}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      InputProps: {
-                        startAdornment: <ScheduleIcon sx={{ mr: 1, color: 'action.active' }} />
-                      }
-                    }
-                  }}
-                />
+              <DatePicker
+  label="Select Date"
+  value={selectedDate}
+  onChange={handleDateChange}
+  shouldDisableDate={isDateDisabled}
+  sx={{ width: '100%' }}
+  slotProps={{
+    textField: {
+      fullWidth: true,
+      InputProps: {
+        sx: {
+          fontSize: '1.25rem', // Increase input font size
+        },
+        startAdornment: (
+          <ScheduleIcon sx={{ mr: 1, color: 'action.active' }} />
+        ),
+      },
+      InputLabelProps: {
+        sx: {
+          fontSize: '1.1rem', // Increase label font size
+        }
+      }
+    }
+  }}
+/>
+
               </LocalizationProvider>
             </Grid>
             <Grid item xs={12} md={4}>
@@ -612,13 +623,20 @@ const AdminHome: React.FC = () => {
                           </TableHead>
                           <TableBody>
                             {roomPapers
-                              .sort((a, b) => (a.selectedSlot?.timeSlot || '').localeCompare(b.selectedSlot?.timeSlot || ''))
+                              .sort((a, b) => (a.selectedSlot?.session || '').localeCompare(b.selectedSlot?.session || ''))
                               .map((paper) => (
                                 <StyledTableRow key={paper.isSpecialSession ? `SS-${paper._id}` : paper._id}>
                                   <StyledTableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <ScheduleIcon fontSize="small" color="action" />
-                                      {paper.selectedSlot?.timeSlot}
+                                      {paper.isSpecialSession
+  ? `${paper.startTime} - ${paper.endTime}`
+  : paper.selectedSlot?.session === 'Session 1'
+    ? 'Session 1 (09:00 AM - 12:00 PM)'
+    : paper.selectedSlot?.session === 'Session 2'
+      ? 'Session 2 (01:00 PM - 04:00 PM)'
+      : paper.selectedSlot?.session || ''}
+
                                     </Box>
                                   </StyledTableCell>
                                   <StyledTableCell>{paper.paperId}</StyledTableCell>
@@ -634,7 +652,7 @@ const AdminHome: React.FC = () => {
                                         {paper.presenters.map((presenter, index) => (
                                           <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                             <PersonIcon fontSize="small" color="action" />
-                                            {presenter.name}
+                                            {presenter.name} ({presenter.phone})
                                           </Box>
                                         ))}
                                       </Box>
@@ -798,11 +816,11 @@ const AdminHome: React.FC = () => {
                               <br />
                               Time: {selectedPaper.isSpecialSession 
                                 ? `${selectedPaper.startTime} - ${selectedPaper.endTime}`
-                                : selectedPaper.selectedSlot?.timeSlot === 'Session 1'
+                                : selectedPaper.selectedSlot?.session === 'Session 1'
                                   ? 'Session 1 (9:00 AM - 12:00 PM)'
-                                  : selectedPaper.selectedSlot?.timeSlot === 'Session 2'
+                                  : selectedPaper.selectedSlot?.session === 'Session 2'
                                     ? 'Session 2 (1:00 PM - 4:00 PM)'
-                                    : selectedPaper.selectedSlot?.timeSlot}
+                                    : selectedPaper.selectedSlot?.session}
                             </Typography>
                           </Box>
                           <Box sx={{ mt: 2 }}>
