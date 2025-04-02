@@ -48,6 +48,7 @@ import {
   Warning as WarningIcon,
   ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
+import { toast } from 'react-toastify';
 import PaperDetails from "../components/PaperDetails";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -58,6 +59,8 @@ import { styled, Theme } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
 import { Paper as PaperType, Presenter } from "../types/paper";
 import NotificationBell from "../components/NotificationBell";
+import SlotSelectionGrid from '../components/SlotSelectionGrid';
+
 
 
 interface AvailableSlot {
@@ -166,14 +169,12 @@ const PresenterHome = () => {
   const [selectedPaper, setSelectedPaper] = useState<Paper | Event | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [slotSelectionOpen, setSlotSelectionOpen] = useState(false);
-  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
-  const [selectedRoom, setSelectedRoom] = useState<string>("");
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [slotError, setSlotError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [scheduledPapers, setScheduledPapers] = useState<Event[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
   const [selectedSession, setSelectedSession] = useState("");
   const [searchCriteria, setSearchCriteria] =
     useState<SearchCriteria>("default");
@@ -244,10 +245,51 @@ const PresenterHome = () => {
     }
   };
 
+  const handleSlotSelect = async ({ date, room, session }: { date: string; room: string; session: string }) => {
+    if (!selectedPaper || !user?.email) return;
+  
+    try {
+      const res = await axios.post("/papers/select-slot", {
+        paperId: selectedPaper._id,
+        date,
+        room,
+        session,
+        presenterEmail: user.email,
+      });
+  
+      if (res.data.success) {
+        toast.success("Slot selected successfully!");
+        setPapers(prev =>
+          prev.map(p => (p._id === selectedPaper._id ? res.data.data : p))
+        );
+        handleCloseDialog();
+      }
+    } catch (err) {
+      toast.error("Failed to select slot");
+    }
+  };
+  
   const handleViewDetails = (paper: Paper | Event) => {
     setSelectedPaper(paper);
     setDetailsOpen(true);
   };
+
+  const fetchSlotsForAllDates = async (domain: string) => {
+    const slotResults: { [date: string]: any[] } = {};
+    for (const date of ALLOWED_DATES) {
+      const res = await axios.get("/papers/available-slots", {
+        params: {
+          domain,
+          date: date + "T00:00:00.000Z",
+        },
+      });
+      if (res.data.success) {
+        slotResults[date] = res.data.data.availableSlots;
+      }
+    }
+    setAllSlotData(slotResults);
+  };
+  
 
   const handleOpenDialog = (paper: Paper | Event) => {
     if ('selectedSlot' in paper && paper.selectedSlot && paper.selectedSlot.bookedBy) {
@@ -264,30 +306,26 @@ const PresenterHome = () => {
         return;
       }
     }
-
+  
     setSelectedPaper(paper);
-    setSelectedDate(null);
-    setSelectedRoom("");
-    setSelectedTimeSlot("");
     setSlotSelectionOpen(true);
     setError("");
     setSuccessMessage("");
+  
+    if (!('isSpecialSession' in paper)) {
+      fetchSlotsForAllDates(paper.domain);
+    }
   };
+  
 
   const handleCloseDialog = () => {
     setSlotSelectionOpen(false);
     setSelectedPaper(null);
-    setSelectedDate(null);
-    setSelectedRoom("");
-    setSelectedTimeSlot("");
     setError("");
     setSuccessMessage("");
   };
 
-  const handleTimeSlotChange = (event: SelectChangeEvent<string>) => {
-    setSelectedTimeSlot(event.target.value);
-  };
-
+ 
   const fetchAvailableSlots = async (domain: string, date: Date) => {
     try {
       const formattedDate = format(date, "yyyy-MM-dd");
@@ -304,19 +342,9 @@ const PresenterHome = () => {
     }
   };
 
-  const handleDateChange = (date: Date | null) => {
-    setSelectedDate(date);
-    setSelectedRoom("");
-    setSelectedTimeSlot("");
-    if (date && selectedPaper && !('isSpecialSession' in selectedPaper)) {
-      fetchAvailableSlots(selectedPaper.domain, date);
-    }
-  };
+  
 
-  const handleRoomSelectChange = (event: SelectChangeEvent<string>) => {
-    setSelectedRoom(event.target.value);
-    setSelectedTimeSlot("");
-  };
+  
 
   const handleAccordionRoomChange =
     (domainRoom: string) =>
@@ -331,46 +359,7 @@ const PresenterHome = () => {
     return !ALLOWED_DATES.includes(format(date, "yyyy-MM-dd"));
   };
 
-  const handleSubmit = async () => {
-    if (
-      !selectedPaper ||
-      !selectedDate ||
-      !selectedRoom ||
-      !selectedTimeSlot ||
-      !user?.email
-    ) {
-      setError("Please select all required fields");
-      return;
-    }
-
-    try {
-      if ('isSpecialSession' in selectedPaper) {
-        setError("Cannot select slot for special sessions");
-        return;
-      }
-
-      const response = await axios.post("/papers/select-slot", {
-        paperId: selectedPaper._id,
-        date: format(selectedDate, "yyyy-MM-dd"),
-        room: selectedRoom,
-        session: selectedTimeSlot,
-        presenterEmail: user.email,
-      });
-      console.log(response.data);
-      if (response.data.success) {
-        console.log("&&&&&&&&&&&&");
-        setSuccessMessage("Slot selected successfully!");
-        setPapers((prevPapers) =>
-          prevPapers.map((p) =>
-            p._id === selectedPaper._id ? response.data.data : p
-          )
-        );
-        setTimeout(handleCloseDialog, 2000);
-      }
-    } catch (error: any) {
-      setError(error.response?.data?.message || "Failed to select slot");
-    }
-  };
+  
 
   const handleLogout = () => {
     logout();
@@ -1014,74 +1003,14 @@ const PresenterHome = () => {
               </Alert>
             )}
             <Box sx={{ mt: 2 }}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Select Date"
-                  value={selectedDate}
-                  onChange={handleDateChange}
-                  shouldDisableDate={isDateDisabled}
-                  defaultCalendarMonth={new Date("2026-01-09")}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      sx: { mb: 2 },
-                    },
-                  }}
-                />
-              </LocalizationProvider>
+            <SlotSelectionGrid
+  allSlotData={allSlotData}
+  onSlotSelect={handleSlotSelect} // sends slot to backend
+  onCancel={handleCloseDialog} // closes modal
+/>
 
-              {selectedDate && (
-                <FormControl fullWidth sx={{ mb: 2 }}>
-                  <InputLabel>Room</InputLabel>
-                  <Select
-                    value={selectedRoom}
-                    label="Room"
-                    onChange={handleRoomSelectChange}
-                  >
-                    {availableSlots.map((slot) => (
-                      <MenuItem key={slot.room} value={slot.room}>
-                        {slot.room}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-
-              {selectedRoom && (
-                <FormControl fullWidth>
-                  <InputLabel>Session</InputLabel>
-                  <Select
-                    value={selectedTimeSlot} // Now storing session name instead of time slot
-                    label="Session"
-                    onChange={(event) =>
-                      setSelectedTimeSlot(event.target.value)
-                    }
-                  >
-                    {/* Session 1 Option */}
-                    <MenuItem value="Session 1">
-                      Session 1 (9:00 AM - 12:00 PM)
-                    </MenuItem>
-
-                    {/* Session 2 Option */}
-                    <MenuItem value="Session 2">
-                      Session 2 (1:00 PM - 4:00 PM)
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-              )}
             </Box>
           </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button
-              onClick={handleSubmit}
-              variant="contained"
-              startIcon={<ScheduleIcon />}
-              disabled={!selectedDate || !selectedRoom || !selectedTimeSlot}
-            >
-              Confirm Slot
-            </Button>
-          </DialogActions>
         </Dialog>
       </Container>
     </Box>
