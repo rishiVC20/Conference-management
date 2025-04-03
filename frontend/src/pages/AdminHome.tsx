@@ -408,8 +408,8 @@ const AdminHome: React.FC = () => {
       description: 'View conference statistics and metrics',
       icon: <DashboardIcon />,
       path: '/admin/dashboard',
-    },
-    {
+    }
+    /*{
       title: 'Schedule Manager',
       description: 'Manage presentation schedules and time slots',
       icon: <ScheduleIcon />,
@@ -426,7 +426,7 @@ const AdminHome: React.FC = () => {
       description: 'Manage presenters and track attendance',
       icon: <PeopleIcon />,
       path: '/admin/presenters',
-    },
+    },*/
   ];
 
   return (

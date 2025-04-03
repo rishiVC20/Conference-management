@@ -66,6 +66,64 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get statistics for papers and special sessions
+router.get('/stats', protect, authorize('admin'), async (req, res) => {
+  console.log('Fetching statistics...');
+  try {
+    // Fetch all papers and special sessions
+    console.log('Fetching papers...');
+    const papers = await Paper.find().lean();
+    console.log(`Found ${papers.length} papers`);
+
+    console.log('Fetching special sessions...');
+    const specialSessions = await SpecialSession.find().lean();
+    console.log(`Found ${specialSessions.length} special sessions`);
+
+    // Calculate scheduling statistics
+    const schedulingStats = {
+      scheduled: papers.filter(paper => paper.selectedSlot && paper.selectedSlot.room && paper.selectedSlot.session).length,
+      notScheduled: papers.filter(paper => !paper.selectedSlot || !paper.selectedSlot.room || !paper.selectedSlot.session).length
+    };
+
+    // Calculate presentation statistics
+    const presentationStats = {
+      presented: papers.filter(paper => paper.presentationStatus === 'Presented').length,
+      inProgress: papers.filter(paper => paper.presentationStatus === 'In Progress').length,
+      scheduled: papers.filter(paper => paper.presentationStatus === 'Scheduled').length,
+      cancelled: papers.filter(paper => paper.presentationStatus === 'Cancelled').length,
+      reported: papers.filter(paper => paper.presentationStatus === 'Reported').length
+    };
+
+    // Calculate special session statistics
+    const specialSessionStats = {
+      total: specialSessions.length,
+      presented: specialSessions.filter(session => session.presentationStatus === 'Presented').length,
+      inProgress: specialSessions.filter(session => session.presentationStatus === 'In Progress').length,
+      scheduled: specialSessions.filter(session => session.presentationStatus === 'Scheduled').length,
+      cancelled: specialSessions.filter(session => session.presentationStatus === 'Cancelled').length
+    };
+
+    console.log('Successfully calculated statistics');
+    res.json({
+      success: true,
+      data: {
+        schedulingStats,
+        presentationStats,
+        specialSessionStats,
+        totalPapers: papers.length,
+        totalSpecialSessions: specialSessions.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching statistics',
+      error: error.message
+    });
+  }
+});
+
 
 router.get('/available-slots', async (req, res) => {
   try {

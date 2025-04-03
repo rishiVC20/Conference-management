@@ -1,5 +1,7 @@
 const xlsx = require('xlsx');
 const Paper = require('../models/paper');
+const PaperCounter = require('../models/PaperCounter');
+
 const mongoose = require('mongoose');
 
 const TIME_SLOTS = [
@@ -26,10 +28,16 @@ const generateRoomName = (domain, roomNumber) => {
 
 const generatePaperId = async (domain) => {
   const domainCode = DOMAIN_CODES[domain] || domain.split(' ').map(word => word[0].toUpperCase()).join('');
-  const count = await Paper.countDocuments({ domain });
-  const nextNumber = count + 1;
-  return `${domainCode}${String(nextNumber).padStart(3, '0')}`;
+
+  const counter = await PaperCounter.findOneAndUpdate(
+    { domain },
+    { $inc: { count: 1 } },
+    { new: true, upsert: true }
+  );
+
+  return `${domainCode}${String(counter.count).padStart(3, '0')}`;
 };
+
 
 const isDuplicate = (title, presenters, newPapers) => {
   for (const paper of newPapers) {
