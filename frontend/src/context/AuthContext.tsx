@@ -47,43 +47,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const cancelTokenRef = useRef<CancelTokenSource | null>(null);
 
+  const publicRoutes = ['/', '/dashboard', '/timetable', '/login', '/register', '/forgot-password', '/reset-password'];
+
   const checkAuth = useCallback(async () => {
-    // Skip auth check if we're registering or already checking
     if (isAuthChecking || isRegistering) return;
 
-    // Skip auth check if we're on login or register page
-    if (['/login', '/register'].includes(location.pathname)) {
+    const isPublic = publicRoutes.some(path => location.pathname.startsWith(path));
+    if (isPublic) {
       setLoading(false);
       return;
     }
 
     setIsAuthChecking(true);
 
-    // Cancel any previous request
     if (cancelTokenRef.current) {
       cancelTokenRef.current.cancel('Operation canceled due to new request.');
     }
 
-    // Create a new cancel token
     cancelTokenRef.current = axios.CancelToken.source();
 
     try {
       const response = await axiosInstance.get('/auth/me', {
         cancelToken: cancelTokenRef.current.token
       });
-      
+
       if (response.data.success) {
         const userData = response.data.data.user;
         setUser(userData);
-        
-        // Only redirect if we're on the root page and have a valid user
-        if (location.pathname === '/' && userData.role) {
+
+        if (location.pathname === '/') {
           navigate(`/${userData.role.toLowerCase()}`, { replace: true });
         }
       } else {
         setUser(null);
-        // Only redirect to login if not on login or register page
-        if (!['/login', '/register'].includes(location.pathname)) {
+        if (!isPublic) {
           navigate('/login', { replace: true });
         }
       }
@@ -91,9 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!axios.isCancel(error)) {
         console.error('Auth check error:', error);
         setUser(null);
-        
-        // Only redirect to login if not on login or register page
-        if (!['/login', '/register'].includes(location.pathname)) {
+        if (!isPublic) {
           navigate('/login', { replace: true });
         }
       }
@@ -105,7 +100,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     checkAuth();
-
     return () => {
       if (cancelTokenRef.current) {
         cancelTokenRef.current.cancel('Component unmounted');
@@ -120,7 +114,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email,
         password
       });
-      
+
       if (response.data.success) {
         const userData = response.data.data.user;
         setUser(userData);
@@ -134,7 +128,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const register = async (username: string, email: string, password: string, role: 'presenter' | 'attendee') => {
+  const register = async (
+    username: string,
+    email: string,
+    password: string,
+    role: 'presenter' | 'attendee'
+  ) => {
     setIsRegistering(true);
     setLoading(true);
     try {
@@ -144,7 +143,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password,
         role
       });
-      
+
       if (response.data.success) {
         const userData = response.data.data.user;
         setUser(userData);
@@ -154,9 +153,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       throw new Error(response.data.message || 'Registration failed');
     } catch (error: any) {
       console.error('Registration error:', error);
-      if (axios.isCancel(error)) {
-        return;
-      }
+      if (axios.isCancel(error)) return;
       throw new Error(error.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
@@ -189,4 +186,4 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export default AuthProvider; 
+export default AuthProvider;

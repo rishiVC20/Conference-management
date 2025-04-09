@@ -17,6 +17,11 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AddSpecialSession from './pages/AddSpecialSession';
 import DomainPaperChart from './pages/DomainPaperChart';
+import HomePage from './pages/HomePage';
+import Timetable from './pages/Timetable';
+
+
+
 
 
 import { AuthProvider } from './context/AuthContext';
@@ -140,7 +145,9 @@ const App: React.FC = () => {
                     </PrivateRoute>
                   }
                 />
-                <Route path="/" element={<Login />} />
+                <Route path="/" element={<HomePage />} />
+                <Route path="/timetable" element={<Timetable />} />
+
               </Routes>
             </NotificationProvider>
           </AuthProvider>

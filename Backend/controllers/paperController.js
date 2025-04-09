@@ -85,7 +85,7 @@ Title: ${title}
 Domain: ${domain}
 Date: ${formattedDate}
 Room: ${room}
-Session: ${session}
+Session: ${session === 'Session 1' ? 'Session 1 (09:00 AM - 12:00 PM)' : 'Session 2 (01:00 PM - 04:00 PM)'}
 
 Please be present at least 15 minutes before your scheduled time.
 

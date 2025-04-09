@@ -352,6 +352,32 @@ router.post('/select-slot', async (req, res) => {
   }
 });
 
+// Public endpoint for full conference timetable
+router.get('/schedule', async (req, res) => {
+  try {
+    console.log('📅 Schedule endpoint HIT!');
+    const papers = await Paper.find({
+      'selectedSlot.date': { $ne: null },
+      'selectedSlot.room': { $ne: '' },
+      'selectedSlot.session': { $ne: '' }
+    }).lean();
+
+    const schedule = papers.map(p => ({
+      title: p.title,
+      domain: p.domain,
+      paperId: p.paperId,
+      room: p.selectedSlot.room,
+      session: p.selectedSlot.session,
+      date: p.selectedSlot.date,
+      presenters: p.presenters.map(pr => pr.name).join(', ')
+    }));
+
+    res.json({ success: true, data: schedule });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to load timetable', error: err.message });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const paper = await Paper.findById(req.params.id);
@@ -496,6 +522,39 @@ router.patch('/:id/reported', protect, authorize('admin'), async (req, res) => {
   }
 });
 
+//public endpoint for dashboard
+router.get('/stats/public', async (req, res) => {
+  try {
+    const papers = await Paper.find().lean();
+    const specialSessions = await SpecialSession.find().lean();
 
+    const schedulingStats = {
+      scheduled: papers.filter(p => p.selectedSlot?.room && p.selectedSlot?.session).length,
+      notScheduled: papers.filter(p => !p.selectedSlot?.room || !p.selectedSlot?.session).length
+    };
+
+    const presentationStats = {
+      presented: papers.filter(p => p.presentationStatus === 'Presented').length,
+      inProgress: papers.filter(p => p.presentationStatus === 'In Progress').length,
+      scheduled: papers.filter(p => p.presentationStatus === 'Scheduled').length,
+      cancelled: papers.filter(p => p.presentationStatus === 'Cancelled').length
+    };
+
+    res.json({
+      success: true,
+      data: {
+        schedulingStats,
+        presentationStats
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching public stats',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;
