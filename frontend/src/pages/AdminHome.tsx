@@ -37,7 +37,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  tableCellClasses
+  tableCellClasses,
+  TextField,
+  InputAdornment
 } from '@mui/material';
 import {
   Event as EventIcon,
@@ -55,6 +57,8 @@ import {
   Notifications as NotificationsIcon,
   People as PeopleIcon,
   Add as AddIcon,
+  Search as SearchIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { Checkbox } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -194,6 +198,8 @@ const AdminHome: React.FC = () => {
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchCriteria, setSearchCriteria] = useState<'default' | 'paperId' | 'title' | 'presenter'>('default');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -278,7 +284,32 @@ const AdminHome: React.FC = () => {
   };
 
   const filteredPapers = papers.filter(paper => {
-    return selectedDomain === 'All' || paper.domain === selectedDomain;
+    const domainMatch = selectedDomain === 'All' || paper.domain === selectedDomain;
+    
+    if (searchQuery.trim() === '') {
+      return domainMatch;
+    }
+    
+    const query = searchQuery.toLowerCase().trim();
+    
+    switch (searchCriteria) {
+      case 'paperId':
+        return domainMatch && paper.paperId?.toLowerCase().includes(query);
+      case 'title':
+        return domainMatch && paper.title?.toLowerCase().includes(query);
+      case 'presenter':
+        if (paper.isSpecialSession) {
+          return domainMatch && paper.speaker?.toLowerCase().includes(query);
+        } else {
+          return domainMatch && paper.presenters?.some(p => 
+            p.name.toLowerCase().includes(query)
+          );
+        }
+      case 'default':
+      default:
+        // Return all items when "default" is selected without filtering
+        return domainMatch;
+    }
   });
 
   const groupedByDomain = filteredPapers.reduce((acc, paper) => {
@@ -552,6 +583,48 @@ const AdminHome: React.FC = () => {
                   ))}
                 </Select>
               </FormControl>
+            </Grid>
+
+            {/* Search Criteria Selector */}
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Search Criteria</InputLabel>
+                <Select
+                  value={searchCriteria}
+                  label="Search Criteria"
+                  onChange={(e) => setSearchCriteria(e.target.value as 'default' | 'paperId' | 'title' | 'presenter')}
+                >
+                  <MenuItem value="default">Default</MenuItem>
+                  <MenuItem value="paperId">Paper ID</MenuItem>
+                  <MenuItem value="title">Paper Title</MenuItem>
+                  <MenuItem value="presenter">Presenter Name</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Search Box */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setSearchQuery('')}>
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                placeholder={`Search by ${searchCriteria === 'default' ? 'all criteria' : searchCriteria}...`}
+              />
             </Grid>
           </Grid>
         </Paper>

@@ -47,6 +47,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   ExpandMore as ExpandMoreIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import { toast } from 'react-toastify';
 import PaperDetails from "../components/PaperDetails";
@@ -375,35 +376,54 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
 
     const searchTermLower = searchTerm.toLowerCase().trim();
 
-    let matchesSearch = true;
-    if (searchTermLower !== "") {
-      switch (searchCriteria) {
-        case "paperId":
-          matchesSearch = paper.paperId?.toLowerCase().includes(searchTermLower) || false;
-          break;
-        case "title":
-          matchesSearch = paper.title.toLowerCase().includes(searchTermLower);
-          break;
-        case "presenter":
-          matchesSearch = paper.presenters?.some(
-            (p) =>
-              p.name.toLowerCase().includes(searchTermLower) ||
-              p.email.toLowerCase().includes(searchTermLower)
-          ) || false;
-          break;
-        default:
-          matchesSearch =
-            (paper.paperId?.toLowerCase().includes(searchTermLower) || false) ||
-            paper.title.toLowerCase().includes(searchTermLower) ||
-            (paper.presenters?.some(
-              (p) =>
-                p.name.toLowerCase().includes(searchTermLower) ||
-                p.email.toLowerCase().includes(searchTermLower)
-            ) || false);
-      }
+    // If search term is empty, return all papers
+    if (searchTermLower === "") {
+      return true;
     }
+    
+    // Filter based on selected search criteria
+    switch (searchCriteria) {
+      case "paperId":
+        return paper.paperId?.toLowerCase().includes(searchTermLower) || false;
+      case "title":
+        return paper.title.toLowerCase().includes(searchTermLower);
+      case "presenter":
+        return paper.presenters?.some(
+          (p) =>
+            p.name.toLowerCase().includes(searchTermLower) ||
+            p.email.toLowerCase().includes(searchTermLower)
+        ) || (paper.speaker?.toLowerCase().includes(searchTermLower) || false);
+      case "default":
+      default:
+        // Return all items when "default" is selected without filtering
+        return true;
+    }
+  });
 
-    return matchesSearch;
+  // Filter papers by search term for the "My Papers" section
+  const filteredPapers = papers.filter(paper => {
+    const searchTermLower = searchTerm.toLowerCase().trim();
+    
+    // If search term is empty, return all papers
+    if (searchTermLower === "") {
+      return true;
+    }
+    
+    // Filter based on selected search criteria
+    switch (searchCriteria) {
+      case "paperId":
+        return paper.paperId?.toLowerCase().includes(searchTermLower) || false;
+      case "title":
+        return paper.title.toLowerCase().includes(searchTermLower);
+      case "presenter":
+        return paper.presenters.some(
+          (p) => p.name.toLowerCase().includes(searchTermLower)
+        );
+      case "default":
+      default:
+        // Return all items when "default" is selected without filtering
+        return true;
+    }
   });
 
   const groupedByDomain = filteredScheduledPapers.reduce((acc, paper) => {
@@ -543,167 +563,225 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
             </Typography>
           </Paper>
         ) : (
-          <Grid container spacing={3}>
-            {papers.map((paper) => (
-              <Grid item xs={12} key={paper._id}>
-                <Card
-                  elevation={0}
-                  sx={{
-                    borderRadius: 2,
-                    border: 1,
-                    borderColor: "divider",
-                    "&:hover": {
-                      borderColor: "primary.main",
-                      boxShadow: 1,
-                    },
-                  }}
-                >
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            mb: 2,
-                          }}
-                        >
-                          <Box>
-                            <Typography variant="h6" gutterBottom>
-                              {paper.title}
-                            </Typography>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                gap: 1,
-                                mb: 2,
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              <Chip
-                                size="small"
-                                icon={<DomainIcon />}
-                                label={paper.domain}
-                                color="primary"
-                              />
-                              <Chip
-                                size="small"
-                                icon={<AssignmentIcon />}
-                                label={`Paper ID: ${paper.paperId}`}
-                                color="secondary"
-                              />
+          <>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h5" gutterBottom>
+                My Papers
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={4}>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Search By</InputLabel>
+                    <Select
+                      value={searchCriteria}
+                      label="Search By"
+                      onChange={(e) =>
+                        setSearchCriteria(e.target.value as SearchCriteria)
+                      }
+                    >
+                      <MenuItem value="default">Default</MenuItem>
+                      <MenuItem value="paperId">Paper ID</MenuItem>
+                      <MenuItem value="title">Title</MenuItem>
+                      <MenuItem value="presenter">Presenter</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} md={8}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label={`Search by ${
+                      searchCriteria === "default"
+                        ? "all criteria"
+                        : searchCriteria
+                    }`}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
+                      endAdornment: searchTerm && (
+                        <InputAdornment position="end">
+                          <IconButton
+                            size="small"
+                            onClick={() => setSearchTerm("")}
+                            edge="end"
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+            
+            <Grid container spacing={3}>
+              {filteredPapers.map((paper) => (
+                <Grid item xs={12} key={paper._id}>
+                  <Card
+                    elevation={0}
+                    sx={{
+                      borderRadius: 2,
+                      border: 1,
+                      borderColor: "divider",
+                      "&:hover": {
+                        borderColor: "primary.main",
+                        boxShadow: 1,
+                      },
+                    }}
+                  >
+                    <CardContent>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                              mb: 2,
+                            }}
+                          >
+                            <Box>
+                              <Typography variant="h6" gutterBottom>
+                                {paper.title}
+                              </Typography>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  gap: 1,
+                                  mb: 2,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <Chip
+                                  size="small"
+                                  icon={<DomainIcon />}
+                                  label={paper.domain}
+                                  color="primary"
+                                />
+                                <Chip
+                                  size="small"
+                                  icon={<AssignmentIcon />}
+                                  label={`Paper ID: ${paper.paperId}`}
+                                  color="secondary"
+                                />
+                                {paper.selectedSlot &&
+                                paper.selectedSlot.bookedBy ? (
+                                  <Chip
+                                    size="small"
+                                    icon={<CheckCircleIcon />}
+                                    label={
+                                      paper.selectedSlot.bookedBy === user?.email
+                                        ? "Booked by you"
+                                        : "Slot Booked"
+                                    }
+                                    color={
+                                      paper.selectedSlot.bookedBy === user?.email
+                                        ? "success"
+                                        : "default"
+                                    }
+                                  />
+                                ) : (
+                                  <Chip
+                                    size="small"
+                                    icon={<WarningIcon />}
+                                    label="No Slot Selected"
+                                    color="warning"
+                                  />
+                                )}
+                              </Box>
                               {paper.selectedSlot &&
-                              paper.selectedSlot.bookedBy ? (
-                                <Chip
-                                  size="small"
-                                  icon={<CheckCircleIcon />}
-                                  label={
-                                    paper.selectedSlot.bookedBy === user?.email
-                                      ? "Booked by you"
-                                      : "Slot Booked"
-                                  }
-                                  color={
-                                    paper.selectedSlot.bookedBy === user?.email
-                                      ? "success"
-                                      : "default"
-                                  }
-                                />
-                              ) : (
-                                <Chip
-                                  size="small"
-                                  icon={<WarningIcon />}
-                                  label="No Slot Selected"
-                                  color="warning"
-                                />
-                              )}
-                            </Box>
-                            {paper.selectedSlot &&
-                              paper.selectedSlot.bookedBy && (
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    gap: 1,
-                                    flexWrap: "wrap",
-                                  }}
-                                >
-                                  <Chip
-                                    size="small"
-                                    icon={<EventIcon />}
-                                    label={format(
-                                      new Date(paper.selectedSlot.date),
-                                      "dd MMM yyyy"
-                                    )}
-                                    variant="outlined"
-                                  />
-                                  <Chip
-                                    size="small"
-                                    icon={<RoomIcon />}
-                                    label={`Room ${paper.selectedSlot.room}`}
-                                    variant="outlined"
-                                  />
-                                  <Chip
-                                    size="small"
-                                    icon={<ScheduleIcon />}
-                                    label={paper.selectedSlot.session === 'Session 1' ? 
-                                      'Session 1 (9:00 AM - 12:00 PM)' : 
-                                      'Session 2 (1:00 PM - 4:00 PM)'}
-                                    variant="outlined"
-                                  />
-                                  {paper.selectedSlot.bookedBy !==
-                                    user?.email && (
+                                paper.selectedSlot.bookedBy && (
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      gap: 1,
+                                      flexWrap: "wrap",
+                                    }}
+                                  >
                                     <Chip
                                       size="small"
-                                      icon={<PersonIcon />}
-                                      label={`Booked by: ${
-                                        paper.presenters.find(
-                                          (p) =>
-                                            p.email ===
-                                            paper.selectedSlot?.bookedBy
-                                        )?.name
-                                      }`}
+                                      icon={<EventIcon />}
+                                      label={format(
+                                        new Date(paper.selectedSlot.date),
+                                        "dd MMM yyyy"
+                                      )}
                                       variant="outlined"
                                     />
-                                  )}
-                                </Box>
-                              )}
-                          </Box>
-                          <Box sx={{ display: "flex", gap: 1 }}>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleViewDetails(paper);
-                              }}
-                              startIcon={<PersonIcon />}
-                              tabIndex={0}
-                            >
-                              View Details
-                            </Button>
-                            {(!paper.selectedSlot?.bookedBy ||
-                              paper.selectedSlot?.bookedBy === user?.email) && (
+                                    <Chip
+                                      size="small"
+                                      icon={<RoomIcon />}
+                                      label={`Room ${paper.selectedSlot.room}`}
+                                      variant="outlined"
+                                    />
+                                    <Chip
+                                      size="small"
+                                      icon={<ScheduleIcon />}
+                                      label={paper.selectedSlot.session === 'Session 1' ? 
+                                        'Session 1 (9:00 AM - 12:00 PM)' : 
+                                        'Session 2 (1:00 PM - 4:00 PM)'}
+                                      variant="outlined"
+                                    />
+                                    {paper.selectedSlot.bookedBy !==
+                                      user?.email && (
+                                      <Chip
+                                        size="small"
+                                        icon={<PersonIcon />}
+                                        label={`Booked by: ${
+                                          paper.presenters.find(
+                                            (p) =>
+                                              p.email ===
+                                              paper.selectedSlot?.bookedBy
+                                          )?.name
+                                        }`}
+                                        variant="outlined"
+                                      />
+                                    )}
+                                  </Box>
+                                )}
+                            </Box>
+                            <Box sx={{ display: "flex", gap: 1 }}>
                               <Button
-                                variant="contained"
+                                variant="outlined"
                                 size="small"
-                                onClick={() => handleOpenDialog(paper)}
-                                startIcon={<ScheduleIcon />}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleViewDetails(paper);
+                                }}
+                                startIcon={<PersonIcon />}
+                                tabIndex={0}
                               >
-                                {paper.selectedSlot?.bookedBy
-                                  ? "Change Slot"
-                                  : "Select Slot"}
+                                View Details
                               </Button>
-                            )}
+                              {(!paper.selectedSlot?.bookedBy ||
+                                paper.selectedSlot?.bookedBy === user?.email) && (
+                                <Button
+                                  variant="contained"
+                                  size="small"
+                                  onClick={() => handleOpenDialog(paper)}
+                                  startIcon={<ScheduleIcon />}
+                                >
+                                  {paper.selectedSlot?.bookedBy
+                                    ? "Change Slot"
+                                    : "Select Slot"}
+                                </Button>
+                              )}
+                            </Box>
                           </Box>
-                        </Box>
+                        </Grid>
                       </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </>
         )}
 
         {showSchedule && (
@@ -741,7 +819,7 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
                         setSearchCriteria(e.target.value as SearchCriteria)
                       }
                     >
-                      <MenuItem value="default">All Fields</MenuItem>
+                      <MenuItem value="default">Default</MenuItem>
                       <MenuItem value="paperId">Paper ID</MenuItem>
                       <MenuItem value="title">Title</MenuItem>
                       <MenuItem value="presenter">Presenter</MenuItem>
@@ -752,7 +830,7 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
                     size="small"
                     label={`Search by ${
                       searchCriteria === "default"
-                        ? "all fields"
+                        ? "all criteria"
                         : searchCriteria
                     }`}
                     value={searchTerm}
