@@ -147,13 +147,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👥 Authors
-
-- Sarthak Kalyankar - Initial work
-
-## 🙏 Acknowledgments
-
-- Thanks to all contributors who helped with the project
-- Special thanks to the MERN stack community
-- Material-UI team for the awesome component library 
