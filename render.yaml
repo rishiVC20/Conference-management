@@ -2,6 +2,7 @@ services:
   - type: web
     name: conference-management-backend
     env: node
+    nodeVersion: 18.17.0
     buildCommand: cd Backend && npm install
     startCommand: cd Backend && node server.js
     envVars:
