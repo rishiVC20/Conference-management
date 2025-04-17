@@ -22,6 +22,7 @@ app.use(cookieParser());
 app.use(cors({
   origin: function(origin, callback) {
     const allowedOrigins = [
+      'https://conferencemanagement123.netlify.app',
       'https://confpict.netlify.app',
       'http://localhost:3000',
       'http://localhost:5000',
