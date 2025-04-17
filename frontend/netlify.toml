@@ -1,6 +1,10 @@
 [build]
   command = "npm run build"
   publish = "build"
+  base = "frontend"
+
+[build.environment]
+  REACT_APP_API_URL = "https://conference-management-l4zg.onrender.com"
 
 [[redirects]]
   from = "/*"
