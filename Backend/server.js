@@ -55,10 +55,15 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-// Connect to MongoDB
-mongoose.connect(config.mongodb.uri)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Connect to MongoDB with updated options
+mongoose.connect(config.mongodb.uri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+})
+.then(() => console.log('Connected to MongoDB'))
+.catch(err => console.error('MongoDB connection error:', err));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -81,32 +86,55 @@ app.use((err, req, res, next) => {
 
 console.log('Sending email using:', process.env.MAIL_USER);
 
-// Kill any existing process on port 5000 if it exists (Windows only)
+// Start server
 const PORT = config.port;
-const server = app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+let server;
+
+async function startServer() {
+  try {
+    server = app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+async function shutdown() {
+  console.log('Shutting down gracefully...');
+  
+  try {
+    if (server) {
+      await new Promise((resolve) => {
+        server.close(resolve);
+      });
+      console.log('HTTP server closed');
+    }
+    
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+      console.log('MongoDB connection closed');
+    }
+    
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during shutdown:', err);
+    process.exit(1);
+  }
+}
+
+// Handle various shutdown signals
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  shutdown();
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  shutdown();
 });
 
-// Handle server shutdown gracefully
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    mongoose.connection.close(false, () => {
-      console.log('MongoDB connection closed');
-      process.exit(0);
-    });
-  });
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  server.close(() => {
-    console.log('HTTP server closed due to uncaught exception');
-    mongoose.connection.close(false, () => {
-      console.log('MongoDB connection closed');
-      process.exit(1);
-    });
-  });
-}); 
+startServer(); 

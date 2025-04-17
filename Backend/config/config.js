@@ -10,6 +10,7 @@ const config = {
     origin: function(origin, callback) {
       const allowedOrigins = [
         'https://confpict.netlify.app',
+        'https://your-netlify-app-name.netlify.app', // Replace with your actual Netlify domain
         'http://localhost:3000',
         'http://localhost:5000',
         'http://127.0.0.1:3000',
