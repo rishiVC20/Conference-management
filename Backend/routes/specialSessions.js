@@ -7,7 +7,7 @@ const {
   getAllSpecialSessions
 } = require('../controllers/specialSessionController');
 const SpecialSession = require('../models/SpecialSession');
-const User = require('../models/User');
+const User = require('../models/user');
 const { createNotificationHelper } = require('../controllers/notificationController');
 
 // Add a new special session (Admin only)

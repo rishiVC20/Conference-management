@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Paper = require('../models/paper');
-const User = require('../models/User');
+const User = require('../models/user');
 const { processExcelData, generateRoomName, TIME_SLOTS } = require('../utils/excelImporter');
 const path = require('path');
 const multer = require('multer');

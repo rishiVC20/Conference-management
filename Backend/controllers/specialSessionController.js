@@ -1,6 +1,6 @@
 const SpecialSession = require('../models/SpecialSession');
 const Paper = require('../models/paper');
-const User = require('../models/User');
+const User = require('../models/user');
 const { createNotificationHelper } = require('./notificationController');
 
 // Helper function to validate session time
