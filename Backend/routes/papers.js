@@ -13,6 +13,7 @@ const { protect, authorize } = require('../middleware/auth');
 const SpecialSession = require('../models/SpecialSession');
 const { createNotificationHelper } = require('../controllers/notificationController');
 const { sendSlotConfirmationEmail } = require('../controllers/paperController');
+const { autoAssignSlots } = require('../controllers/autoAssignSlots');
 
 // Constants
 const PAPERS_PER_ROOM = 12;
@@ -33,6 +34,8 @@ const calculateRoomsPerDay = (paperCount) => {
   return Math.min(roomsNeeded, MAX_ROOMS_PER_DOMAIN);
 };
 
+
+router.post('/admin/auto-assign-slots',protect, authorize('admin'), autoAssignSlots);
 
 router.post('/admin-add', protect, authorize('admin'), adminAddPaper);
 

@@ -439,7 +439,13 @@ const AdminHome: React.FC = () => {
       description: 'View conference statistics and metrics',
       icon: <DashboardIcon />,
       path: '/admin/dashboard',
-    }
+    },
+    {
+      title: 'Slot Allocations',
+      description: 'View and manage slot bookings per domain',
+      icon: <ScheduleIcon />,
+      path: '/admin/slot-allocation',
+    }    
     /*{
       title: 'Schedule Manager',
       description: 'Manage presentation schedules and time slots',

@@ -19,7 +19,7 @@ import AddSpecialSession from './pages/AddSpecialSession';
 import DomainPaperChart from './pages/DomainPaperChart';
 import HomePage from './pages/HomePage';
 import Timetable from './pages/Timetable';
-
+import AdminSlotAllocationPage from './pages/AdminSlotAllocationPage';
 
 
 
@@ -80,6 +80,7 @@ const App: React.FC = () => {
                     </PrivateRoute>
                   }
                 />
+                <Route path="/admin/slot-allocation" element={<AdminSlotAllocationPage />} />
                 <Route
                   path="/attendee"
                   element={
