@@ -66,6 +66,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     cancelTokenRef.current = axios.CancelToken.source();
 
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      if (!isPublic) navigate('/login', { replace: true });
+      return;
+    }
+
+    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
     try {
       const response = await axiosInstance.get('/auth/me', {
         cancelToken: cancelTokenRef.current.token
@@ -74,12 +84,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (response.data.success) {
         const userData = response.data.data.user;
         setUser(userData);
+        localStorage.setItem('auth_user', JSON.stringify(userData));
 
         if (location.pathname === '/') {
           navigate(`/${userData.role.toLowerCase()}`, { replace: true });
         }
       } else {
         setUser(null);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
         if (!isPublic) {
           navigate('/login', { replace: true });
         }
@@ -88,6 +101,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!axios.isCancel(error)) {
         console.error('Auth check error:', error);
         setUser(null);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
         if (!isPublic) {
           navigate('/login', { replace: true });
         }
@@ -99,6 +114,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [navigate, location.pathname, isAuthChecking, isRegistering]);
 
   useEffect(() => {
+    const savedUser = localStorage.getItem('auth_user');
+    if (savedUser && !user) {
+      setUser(JSON.parse(savedUser));
+    }
     checkAuth();
     return () => {
       if (cancelTokenRef.current) {
@@ -117,6 +136,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (response.data.success) {
         const userData = response.data.data.user;
+        const token = response.data.token;
+
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('auth_user', JSON.stringify(userData));
+
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
         setUser(userData);
         navigate(`/${userData.role.toLowerCase()}`, { replace: true });
         return userData;
@@ -146,6 +172,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (response.data.success) {
         const userData = response.data.data.user;
+        const token = response.data.token;
+
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('auth_user', JSON.stringify(userData));
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
         setUser(userData);
         navigate(`/${userData.role.toLowerCase()}`, { replace: true });
         return;
@@ -168,6 +200,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
       setUser(null);
       setLoading(false);
       navigate('/login', { replace: true });
