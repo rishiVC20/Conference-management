@@ -19,7 +19,47 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Configure CORS with specific options
-app.use(cors(config.cors));
+app.use(cors({
+  origin: function(origin, callback) {
+    const allowedOrigins = [
+      'https://conferencemanagement123.netlify.app',
+      'https://confpict.netlify.app',
+      'http://localhost:3000',
+      'http://localhost:5000',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5000'
+    ];
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Not allowed by CORS:', origin);
+      // In development, allow all origins for easier testing
+      if (process.env.NODE_ENV === 'development') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Cookie',
+    'Accept',
+    'Origin',
+    'X-Requested-With'
+  ],
+  exposedHeaders: ['Set-Cookie', 'Authorization'],
+  maxAge: 86400,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
 
 // Connect to MongoDB with updated options
 mongoose.connect(config.mongodb.uri, config.mongodb.options)

@@ -22,8 +22,8 @@ const sendTokenResponse = (user, statusCode, res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/',
-        domain: process.env.NODE_ENV === 'production' ? '.netlify.app' : 'localhost'
+        path: '/'
+        // Removed domain setting to allow cookies to work across domains
     };
 
     // Remove password from output

@@ -23,14 +23,16 @@ exports.protect = async (req, res, next) => {
             console.log('No token found');
             return res.status(401).json({ 
                 success: false,
-                message: 'Please log in to access this resource' 
+                message: 'Please log in to access this resource',
+                error: 'NO_TOKEN'
             });
         }
 
         try {
             // Verify token
-            console.log('Verifying token');
+            console.log('Verifying token with secret:', JWT_SECRET.substring(0, 5) + '...');
             const decoded = jwt.verify(token, JWT_SECRET);
+            console.log('Token decoded successfully:', decoded);
             
             // Check if user still exists
             const user = await User.findById(decoded.id).select('-password');
@@ -39,7 +41,8 @@ exports.protect = async (req, res, next) => {
                 console.log('User not found for token');
                 return res.status(401).json({ 
                     success: false,
-                    message: 'The user belonging to this token no longer exists' 
+                    message: 'The user belonging to this token no longer exists',
+                    error: 'USER_NOT_FOUND'
                 });
             }
 
@@ -48,7 +51,8 @@ exports.protect = async (req, res, next) => {
                 console.log('Password changed after token issued');
                 return res.status(401).json({ 
                     success: false,
-                    message: 'User recently changed password. Please log in again' 
+                    message: 'User recently changed password. Please log in again',
+                    error: 'PASSWORD_CHANGED'
                 });
             }
 
@@ -56,17 +60,20 @@ exports.protect = async (req, res, next) => {
             req.user = user;
             next();
         } catch (error) {
-            console.log('Token verification error:', error.name);
+            console.log('Token verification error:', error.name, error.message);
             if (error.name === 'JsonWebTokenError') {
                 return res.status(401).json({ 
                     success: false,
-                    message: 'Invalid token. Please log in again' 
+                    message: 'Invalid token. Please log in again',
+                    error: 'INVALID_TOKEN',
+                    details: error.message
                 });
             }
             if (error.name === 'TokenExpiredError') {
                 return res.status(401).json({ 
                     success: false,
-                    message: 'Your token has expired. Please log in again' 
+                    message: 'Your token has expired. Please log in again',
+                    error: 'TOKEN_EXPIRED'
                 });
             }
             throw error;
@@ -75,7 +82,9 @@ exports.protect = async (req, res, next) => {
         console.error('Auth middleware error:', error);
         res.status(500).json({ 
             success: false,
-            message: 'An error occurred while authenticating. Please try again' 
+            message: 'An error occurred while authenticating. Please try again',
+            error: 'SERVER_ERROR',
+            details: error.message
         });
     }
 };
