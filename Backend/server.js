@@ -19,52 +19,17 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Configure CORS with specific options
-app.use(cors({
-  origin: function(origin, callback) {
-    const allowedOrigins = [
-      'https://conferencemanagement123.netlify.app',
-      'https://confpict.netlify.app',
-      'http://localhost:3000',
-      'http://localhost:5000',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:5000'
-    ];
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('Not allowed by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'Cookie',
-    'Accept',
-    'Origin',
-    'X-Requested-With'
-  ],
-  exposedHeaders: ['Set-Cookie', 'Authorization'],
-  maxAge: 86400,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-}));
+app.use(cors(config.cors));
 
 // Connect to MongoDB with updated options
-mongoose.connect(config.mongodb.uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
+mongoose.connect(config.mongodb.uri, config.mongodb.options)
+  .then(() => {
+    console.log(`Connected to MongoDB (${config.env} environment)`);
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -74,18 +39,64 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/email', emailRoutes);
 
-// Health check route
+// Health check route with enhanced information
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({
+    status: 'ok',
+    environment: config.env,
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Error handling middleware
+// 404 handler
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: 'Resource not found',
+    path: req.path
+  });
+});
+
+// Error handling middleware with better error responses
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, message: 'Something went wrong!' });
+  console.error('Error:', {
+    message: err.message,
+    stack: config.env === 'development' ? err.stack : undefined,
+    path: req.path,
+    method: req.method
+  });
+
+  // Handle specific types of errors
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation Error',
+      errors: Object.values(err.errors).map(e => e.message)
+    });
+  }
+
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  // Default error response
+  res.status(err.status || 500).json({
+    success: false,
+    message: config.env === 'development' ? err.message : 'Something went wrong!',
+    ...(config.env === 'development' && { stack: err.stack })
+  });
 });
 
-console.log('Sending email using:', process.env.MAIL_USER);
+if (config.env === 'development') {
+  console.log('Email configuration:', {
+    user: config.email.user,
+    configured: Boolean(config.email.user && config.email.pass)
+  });
+}
 
 // Start server
 const PORT = config.port;
@@ -94,7 +105,7 @@ let server;
 async function startServer() {
   try {
     server = app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+      console.log(`Server is running on port ${PORT} (${config.env} environment)`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
