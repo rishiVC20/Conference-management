@@ -4,8 +4,8 @@ A full-stack web application for managing academic conferences, built with the M
 
 ## 🌟 Live Demo
 
-- Frontend: [https://confpict.netlify.app](https://confpict.netlify.app)
-- Backend: [https://conference-app-backend-7295.onrender.com](https://conference-app-backend-7295.onrender.com)
+- Frontend: [https://conferencemanagement123.netlify.app](https://conferencemanagement123.netlify.app)
+- Backend: [[https://conference-app-backend-7295.onrender.com](https://conference-management-l4zg.onrender.com/)]
 
 ## ✨ Features
 
@@ -55,8 +55,8 @@ A full-stack web application for managing academic conferences, built with the M
 
 1. Clone the repository
 ```bash
-git clone https://github.com/Sarthak0722/event_management.git
-cd mern-conference-app
+git https://github.com/rishiVC20/Conference-management.git
+cd Conference-management
 ```
 
 2. Install Backend Dependencies
