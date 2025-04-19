@@ -39,7 +39,8 @@ import {
   TableRow,
   tableCellClasses,
   TextField,
-  InputAdornment
+  InputAdornment,
+  useMediaQuery
 } from '@mui/material';
 import {
   Event as EventIcon,
@@ -188,6 +189,7 @@ const getStatusIcon = (status: Paper['presentationStatus']) => {
 const AdminHome: React.FC = () => {
   const { user, logout } = useAuth();
   const theme = useTheme();
+  const matchesXs = useMediaQuery(theme.breakpoints.down('sm'));
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date(ALLOWED_DATES[0]));
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
@@ -468,26 +470,51 @@ const AdminHome: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}>
-      <AppBar position="static" elevation={1}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Conference Schedule Management
-        </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <AppBar position="static" elevation={0}>
+        <Toolbar sx={{ 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          py: { xs: 2, sm: 0 },
+          gap: { xs: 1, sm: 0 }
+        }}>
+          <Typography variant="h6" component="div" sx={{ 
+            flexGrow: 1,
+            fontSize: { xs: '1.1rem', sm: '1.25rem' }
+          }}>
+            Admin Dashboard
+          </Typography>
+          <Box sx={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: 2,
+            width: { xs: '100%', sm: 'auto' },
+            justifyContent: { xs: 'space-between', sm: 'flex-end' }
+          }}>
             <NotificationBell />
-            <Typography variant="body2" sx={{ color: alpha(theme.palette.common.white, 0.8) }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                maxWidth: { xs: 150, sm: 'none' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
               {user?.email}
-        </Typography>
-            <IconButton color="inherit" onClick={handleLogout} size="small">
+            </Typography>
+            <IconButton color="inherit" onClick={handleLogout}>
               <LogoutIcon />
             </IconButton>
           </Box>
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Container maxWidth="lg" sx={{ 
+        mt: { xs: 2, sm: 4 }, 
+        mb: { xs: 2, sm: 4 },
+        px: { xs: 1, sm: 2, md: 3 }
+      }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
@@ -544,93 +571,66 @@ const AdminHome: React.FC = () => {
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={4}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-  label="Select Date"
-  value={selectedDate}
-  onChange={handleDateChange}
-  shouldDisableDate={isDateDisabled}
-  sx={{ width: '100%' }}
-  slotProps={{
-    textField: {
-      fullWidth: true,
-      InputProps: {
-        sx: {
-          fontSize: '1.25rem', // Increase input font size
-        },
-        startAdornment: (
-          <ScheduleIcon sx={{ mr: 1, color: 'action.active' }} />
-        ),
-      },
-      InputLabelProps: {
-        sx: {
-          fontSize: '1.1rem', // Increase label font size
-        }
-      }
-    }
-  }}
-/>
-
+                <DatePicker
+                  label="View Schedule For"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  shouldDisableDate={isDateDisabled}
+                  defaultCalendarMonth={new Date(ALLOWED_DATES[0])}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                    },
+                  }}
+                />
               </LocalizationProvider>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Domain</InputLabel>
-                <Select
-                  value={selectedDomain}
-                  label="Domain"
-                  onChange={(e) => setSelectedDomain(e.target.value)}
-                  startAdornment={<DomainIcon sx={{ mr: 1, color: 'action.active' }} />}
+            <Grid item xs={12} md={8}>
+              <Box sx={{ 
+                display: "flex", 
+                gap: 1,
+                flexDirection: { xs: 'column', sm: 'row' }
+              }}>
+                <FormControl 
+                  size="small" 
+                  sx={{ 
+                    minWidth: { xs: '100%', sm: 120 }
+                  }}
                 >
-                  <MenuItem value="All">All Domains</MenuItem>
-                  {Object.keys(groupedByDomain).map((domain) => (
-                    <MenuItem key={domain} value={domain}>
-                      {domain}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Search Criteria Selector */}
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Search Criteria</InputLabel>
-                <Select
-                  value={searchCriteria}
-                  label="Search Criteria"
-                  onChange={(e) => setSearchCriteria(e.target.value as 'default' | 'paperId' | 'title' | 'presenter')}
-                >
-                  <MenuItem value="default">Default</MenuItem>
-                  <MenuItem value="paperId">Paper ID</MenuItem>
-                  <MenuItem value="title">Paper Title</MenuItem>
-                  <MenuItem value="presenter">Presenter Name</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Search Box */}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                  endAdornment: searchQuery && (
-                    <InputAdornment position="end">
-                      <IconButton size="small" onClick={() => setSearchQuery('')}>
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                placeholder={`Search by ${searchCriteria === 'default' ? 'all criteria' : searchCriteria}...`}
-              />
+                  <InputLabel>Search By</InputLabel>
+                  <Select
+                    value={searchCriteria}
+                    label="Search By"
+                    onChange={(e) =>
+                      setSearchCriteria(e.target.value as 'default' | 'paperId' | 'title' | 'presenter')
+                    }
+                  >
+                    <MenuItem value="default">Default</MenuItem>
+                    <MenuItem value="paperId">Paper ID</MenuItem>
+                    <MenuItem value="title">Title</MenuItem>
+                    <MenuItem value="presenter">Presenter</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={`Search by ${
+                    searchCriteria === "default"
+                      ? "all criteria"
+                      : searchCriteria
+                  }`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
             </Grid>
           </Grid>
         </Paper>
@@ -642,184 +642,184 @@ const AdminHome: React.FC = () => {
               expanded={expandedDomain === domain}
               onChange={handleDomainChange(domain)}
               sx={{
-                mb: 1,
-                '&:before': { display: 'none' },
-                bgcolor: 'background.paper',
-                borderRadius: 1,
-                overflow: 'hidden'
+                mb: { xs: 1, sm: 2 },
+                "&:before": { display: "none" },
+                borderRadius: "8px !important",
+                overflow: "hidden",
+                border: 1,
+                borderColor: "divider",
               }}
             >
-              <AccordionSummary 
+              <AccordionSummary
                 expandIcon={<ExpandMoreIcon />}
                 sx={{
-                  bgcolor: alpha(theme.palette.primary.main, 0.05),
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.08)
-                  }
+                  backgroundColor: theme.palette.primary.light,
+                  color: "white",
+                  "& .MuiAccordionSummary-expandIconWrapper": {
+                    color: "white",
+                  },
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <DomainIcon color="primary" />
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    {domain}
-                  </Typography>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <DomainIcon sx={{ mr: 1 }} />
+                  <Typography variant="h6">{domain}</Typography>
+                  <Chip
+                    size="small"
+                    label={`${Object.keys(rooms).length} Rooms`}
+                    sx={{
+                      ml: 2,
+                      backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    }}
+                  />
                 </Box>
               </AccordionSummary>
-              <AccordionDetails sx={{ p: 2 }}>
+              <AccordionDetails sx={{ p: { xs: 1, sm: 2 } }}>
                 {Object.entries(rooms).map(([room, roomPapers]) => (
-                  <Box key={`${domain}-${room}`} sx={{ mb: 2 }}>
-                    <Paper 
-                      elevation={0} 
-                      sx={{ 
-                        p: 2, 
-                        bgcolor: alpha(theme.palette.background.paper, 0.5),
-                        borderRadius: 1
+                  <Accordion
+                    key={`${domain}-${room}`}
+                    expanded={expandedRooms[`${domain}-${room}`] || false}
+                    onChange={handleRoomChange(`${domain}-${room}`)}
+                    sx={{
+                      mb: { xs: 1, sm: 2 },
+                      "&:before": { display: "none" },
+                      borderRadius: 1,
+                      overflow: "hidden",
+                      border: 1,
+                      borderColor: "divider",
+                    }}
+                  >
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon />}
+                      sx={{
+                        backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                        "&:hover": {
+                          backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                        },
                       }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <RoomIcon color="primary" />
-                        <Typography variant="h6">
-                          {room}
-          </Typography>
-                        <Chip 
-                          label={`${roomPapers.length} Presentations`} 
-                          size="small" 
-                          sx={{ ml: 'auto' }}
+                        <Typography variant="h6">{room}</Typography>
+                        <Chip
+                          label={`${roomPapers.length} Papers`}
+                          size="small"
+                          sx={{ ml: 2 }}
                         />
                       </Box>
-                      <TableContainer>
-                        <Table size="medium" aria-label="presentation schedule">
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ p: { xs: 1, sm: 2 } }}>
+                      <TableContainer sx={{ 
+                        maxWidth: '100%',
+                        overflowX: 'auto',
+                        '-webkit-overflow-scrolling': 'touch',
+                        '&::-webkit-scrollbar': {
+                          height: 6
+                        },
+                        '&::-webkit-scrollbar-track': {
+                          backgroundColor: 'rgba(0,0,0,0.1)'
+                        },
+                        '&::-webkit-scrollbar-thumb': {
+                          borderRadius: 3,
+                          backgroundColor: 'rgba(0,0,0,0.2)'
+                        }
+                      }}>
+                        <Table 
+                          size={matchesXs ? "small" : "medium"} 
+                          aria-label="schedule"
+                          sx={{
+                            minWidth: { xs: 650, sm: 800 }
+                          }}
+                        >
                           <TableHead>
                             <TableRow>
-                              <StyledTableCell>Time Slot</StyledTableCell>
-                              <StyledTableCell>ID</StyledTableCell>
+                              <StyledTableCell>Time</StyledTableCell>
                               <StyledTableCell>Title</StyledTableCell>
-                              <StyledTableCell>Presenters/Speaker</StyledTableCell>
-                              <StyledTableCell>Reporting Status</StyledTableCell>
-                              <StyledTableCell>Presentation Status</StyledTableCell>
+                              <StyledTableCell>Paper-ID</StyledTableCell>
+                              <StyledTableCell>Presenters</StyledTableCell>
+                              <StyledTableCell>Status</StyledTableCell>
                               <StyledTableCell align="right">Actions</StyledTableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {roomPapers
-                              .sort((a, b) => (a.selectedSlot?.session || '').localeCompare(b.selectedSlot?.session || ''))
-                              .map((paper) => (
-                                <StyledTableRow key={paper.isSpecialSession ? `SS-${paper._id}` : paper._id}>
-                                  <StyledTableCell>
+                            {roomPapers.map((paper) => (
+                              <StyledTableRow key={paper._id}>
+                                <StyledTableCell>
+                                  {paper.isSpecialSession ? (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <ScheduleIcon fontSize="small" color="action" />
-                                      {paper.isSpecialSession
-  ? `${paper.startTime} - ${paper.endTime}`
-  : paper.selectedSlot?.session === 'Session 1'
-    ? 'Session 1 (09:00 AM - 12:00 PM)'
-    : paper.selectedSlot?.session === 'Session 2'
-      ? 'Session 2 (01:00 PM - 04:00 PM)'
-      : paper.selectedSlot?.session || ''}
-
+                                      {paper.startTime} - {paper.endTime}
                                     </Box>
-                                  </StyledTableCell>
-                                  <StyledTableCell>{paper.paperId}</StyledTableCell>
-                                  <StyledTableCell>{paper.title}</StyledTableCell>
-                                  <StyledTableCell>
-                                    {paper.isSpecialSession ? (
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                        <PersonIcon fontSize="small" color="action" />
-                                        {paper.speaker}
-                                      </Box>
-                                    ) : (
-                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                        {paper.presenters.map((presenter, index) => (
-                                          <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            <PersonIcon fontSize="small" color="action" />
-                                            {presenter.name} ({presenter.phone})
-                                          </Box>
-                                        ))}
-                                      </Box>
-                                    )}
-                                  </StyledTableCell>
-
-
-                                  <StyledTableCell>
-  <FormControlLabel
-    control={
-      <Switch
-        checked={paper.reported || false}
-        onChange={(e) =>
-          handleReportedChange(paper._id, e.target.checked, setPapers, setError)
-        }
-        color="primary"
-        size="small"
-      />
-    }
-    label={
-      <Typography variant="body2" color="text.secondary">
-        {paper.reported ? 'Reported' : 'Not Reported'}
-      </Typography>
-    }
-    labelPlacement="end" 
-  />
-</StyledTableCell>
-
-<StyledTableCell>
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-    <FormControlLabel
-      control={
-        <Checkbox
-          checked={paper.presentationStatus === 'Presented'}
-          onChange={(e) =>
-            handleStatusChange(
-              paper.isSpecialSession ? `SS-${paper._id}` : paper._id,
-              e.target.checked ? 'Presented' : 'Scheduled'
-            )
-          }
-          disabled={
-            updatingStatus ===
-            (paper.isSpecialSession ? `SS-${paper._id}` : paper._id)
-          }
-          color="success"
-        />
-      }
-      label="Presented"
-    />
-
-    {updatingStatus === (paper.isSpecialSession ? `SS-${paper._id}` : paper._id) ? (
-      <CircularProgress size={20} />
-    ) : (
-      <Chip
-        label={paper.presentationStatus || 'Scheduled'}
-        size="small"
-        sx={{
-          color: getStatusColor(paper.presentationStatus || 'Scheduled', theme),
-          bgcolor: getStatusBgColor(paper.presentationStatus || 'Scheduled', theme),
-          '&:hover': {
-            bgcolor: getStatusBgHoverColor(paper.presentationStatus || 'Scheduled', theme)
-          }
-        }}
-      />
-    )}
-  </Box>
-</StyledTableCell>
-
-                                  <StyledTableCell align="right">
-                                    <Button
-                                      variant="outlined"
+                                  ) : (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <ScheduleIcon fontSize="small" color="action" />
+                                      {paper.selectedSlot?.session === 'Session 1' 
+                                        ? 'Session 1 (9:00 AM - 12:00 PM)'
+                                        : 'Session 2 (1:00 PM - 4:00 PM)'}
+                                    </Box>
+                                  )}
+                                </StyledTableCell>
+                                <StyledTableCell>
+                                  <Typography variant="body2">
+                                    {paper.title}
+                                  </Typography>
+                                  {paper.isSpecialSession && paper.sessionType && (
+                                    <Chip
                                       size="small"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleViewDetails(paper);
-                                      }}
-                                      startIcon={<EventIcon />}
-                                    >
-                                      View Details
-                                    </Button>
-                                  </StyledTableCell>
-                                </StyledTableRow>
-                              ))}
+                                      label={paper.sessionType}
+                                      color="secondary"
+                                      sx={{ mt: 0.5 }}
+                                    />
+                                  )}
+                                </StyledTableCell>
+                                <StyledTableCell>{paper.paperId}</StyledTableCell>
+                                <StyledTableCell>
+                                  {paper.isSpecialSession ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                      <PersonIcon fontSize="small" color="action" />
+                                      {paper.speaker}
+                                    </Box>
+                                  ) : (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                      {paper.presenters.map((presenter, index) => (
+                                        <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                          <PersonIcon fontSize="small" color="action" />
+                                          {presenter.name}
+                                        </Box>
+                                      ))}
+                                    </Box>
+                                  )}
+                                </StyledTableCell>
+                                <StyledTableCell>
+                                  <Chip
+                                    label={paper.presentationStatus}
+                                    size="small"
+                                    sx={{
+                                      color: getStatusColor(paper.presentationStatus, theme),
+                                      bgcolor: getStatusBgColor(paper.presentationStatus, theme),
+                                      '&:hover': {
+                                        bgcolor: getStatusBgHoverColor(paper.presentationStatus, theme),
+                                      },
+                                    }}
+                                  />
+                                </StyledTableCell>
+                                <StyledTableCell align="right">
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => handleViewDetails(paper)}
+                                    startIcon={<EventIcon />}
+                                    fullWidth={matchesXs}
+                                  >
+                                    View Details
+                                  </Button>
+                                </StyledTableCell>
+                              </StyledTableRow>
+                            ))}
                           </TableBody>
                         </Table>
                       </TableContainer>
-                    </Paper>
-                  </Box>
+                    </AccordionDetails>
+                  </Accordion>
                 ))}
               </AccordionDetails>
             </Accordion>
@@ -831,116 +831,112 @@ const AdminHome: React.FC = () => {
           onClose={handleCloseDetails}
           maxWidth="sm"
           fullWidth
+          sx={{
+            '& .MuiDialog-paper': {
+              margin: { xs: 1, sm: 2 },
+              width: { xs: 'calc(100% - 16px)', sm: '100%' },
+              maxHeight: { xs: 'calc(100% - 16px)', sm: '80vh' }
+            }
+          }}
         >
-          {selectedPaper && (
-            <>
-              <DialogTitle>
-                {selectedPaper.isSpecialSession ? 'Special Session Details' : 'Paper Details'}
-              </DialogTitle>
-              <DialogContent>
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default' }}>
-                      <Typography variant="h6" gutterBottom>
-                        {selectedPaper.title}
+          <DialogTitle>
+            <Typography variant="h6">Paper Details</Typography>
+          </DialogTitle>
+          <DialogContent>
+            {selectedPaper && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  {selectedPaper.title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  ID: {selectedPaper.paperId}
+                </Typography>
+                {selectedPaper.isSpecialSession ? (
+                  <>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Session Type
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        ID: {selectedPaper.paperId}
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedPaper.sessionType}
                       </Typography>
-                      {selectedPaper.isSpecialSession ? (
-                        <>
-                          <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Session Type
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {selectedPaper.sessionType}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Speaker
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {selectedPaper.speaker}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Schedule
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Room: {selectedPaper.selectedSlot?.room}
-                              <br />
-                              Time: {selectedPaper.startTime} - {selectedPaper.endTime}
-                            </Typography>
-                          </Box>
-                        </>
-                      ) : (
-                        <>
-                          <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Domain
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {selectedPaper.domain}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Schedule
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Room: {selectedPaper.selectedSlot?.room}
-                              <br />
-                              Time: {selectedPaper.isSpecialSession 
-                                ? `${selectedPaper.startTime} - ${selectedPaper.endTime}`
-                                : selectedPaper.selectedSlot?.session === 'Session 1'
-                                  ? 'Session 1 (9:00 AM - 12:00 PM)'
-                                  : selectedPaper.selectedSlot?.session === 'Session 2'
-                                    ? 'Session 2 (1:00 PM - 4:00 PM)'
-                                    : selectedPaper.selectedSlot?.session}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Presenters
-                            </Typography>
-                            {selectedPaper.presenters.map((presenter, index) => (
-                              <Box key={index} sx={{ mb: 1 }}>
-                                <Typography variant="body2">
-                                  {presenter.name}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {presenter.email}
-                                </Typography>
-                              </Box>
-                            ))}
-                          </Box>
-                        </>
-                      )}
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          {selectedPaper.isSpecialSession ? 'Description' : 'Synopsis'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {selectedPaper.isSpecialSession ? selectedPaper.synopsis : selectedPaper.synopsis}
-                        </Typography>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                </Grid>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={handleCloseDetails}>
-                  Close
-        </Button>
-              </DialogActions>
-            </>
-          )}
+                    </Box>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Speaker
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedPaper.speaker}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Schedule
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Room: {selectedPaper.selectedSlot?.room}
+                        <br />
+                        Time: {selectedPaper.startTime} - {selectedPaper.endTime}
+                      </Typography>
+                    </Box>
+                  </>
+                ) : (
+                  <>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Domain
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedPaper.domain}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Schedule
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Room: {selectedPaper.selectedSlot?.room}
+                        <br />
+                        Time: {selectedPaper.isSpecialSession 
+                          ? `${selectedPaper.startTime} - ${selectedPaper.endTime}`
+                          : selectedPaper.selectedSlot?.session === 'Session 1'
+                            ? 'Session 1 (9:00 AM - 12:00 PM)'
+                            : selectedPaper.selectedSlot?.session === 'Session 2'
+                              ? 'Session 2 (1:00 PM - 4:00 PM)'
+                              : selectedPaper.selectedSlot?.session}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Presenters
+                      </Typography>
+                      {selectedPaper.presenters.map((presenter, index) => (
+                        <Box key={index} sx={{ mb: 1 }}>
+                          <Typography variant="body2">
+                            {presenter.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {presenter.email}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </>
+                )}
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    {selectedPaper.isSpecialSession ? 'Description' : 'Synopsis'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedPaper.isSpecialSession ? selectedPaper.synopsis : selectedPaper.synopsis}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </DialogContent>
         </Dialog>
       </Container>
-      </Box>
+    </Box>
   );
 };
 

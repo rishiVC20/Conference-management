@@ -34,6 +34,8 @@ import {
   TableHead,
   TableRow,
   tableCellClasses,
+  CircularProgress,
+  Snackbar,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -61,6 +63,9 @@ import { alpha } from "@mui/material/styles";
 import { Paper as PaperType, Presenter } from "../types/paper";
 import NotificationBell from "../components/NotificationBell";
 import SlotSelectionGrid from '../components/SlotSelectionGrid';
+import { Tabs, Tab } from "@mui/material";
+import { useMediaQuery } from "@mui/material";
+
 
 
 
@@ -162,6 +167,7 @@ interface Paper {
 
 const PresenterHome = () => {
   const theme = useTheme();
+  const matchesXs = useMediaQuery(theme.breakpoints.down('sm'));
   const { user, logout } = useAuth();
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,40 +180,29 @@ const PresenterHome = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [scheduledPapers, setScheduledPapers] = useState<Event[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
-const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
   const [selectedSession, setSelectedSession] = useState("");
-  const [searchCriteria, setSearchCriteria] =
-    useState<SearchCriteria>("default");
+  const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>("default");
   const [expandedDomain, setExpandedDomain] = useState<string | false>(false);
-  const [expandedRooms, setExpandedRooms] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [showSchedule, setShowSchedule] = useState(false);
-  const [scheduleViewDate, setScheduleViewDate] = useState<Date | null>(null);
+  const [expandedRooms, setExpandedRooms] = useState<{[key: string]: boolean}>({});
+  const [scheduleViewDate, setScheduleViewDate] = useState<Date | null>(new Date(ALLOWED_DATES[0]));
+  const [activeTab, setActiveTab] = useState<"mypapers" | "schedule">("mypapers");
+  const [isSlotSelecting, setIsSlotSelecting] = useState(false);
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: "mypapers" | "schedule") => {
+    setActiveTab(newValue);
+  };
 
   useEffect(() => {
     fetchPresenterPapers();
   }, [user?.email]);
 
   useEffect(() => {
-    // Check if any paper has a booked slot
-    const hasBookedSlot = papers.some((paper) => paper.selectedSlot?.bookedBy);
-    console.log("Has booked slot:", hasBookedSlot);
-    console.log("Booked paper:", papers.find((p) => p.selectedSlot?.bookedBy));
-
-    setShowSchedule(hasBookedSlot);
-
-    if (hasBookedSlot) {
-      // Set initial schedule view date to the first booked paper's date
-      const bookedPaper = papers.find((p) => p.selectedSlot?.bookedBy);
-      if (bookedPaper?.selectedSlot?.date) {
-        const date = new Date(bookedPaper.selectedSlot.date);
-        setScheduleViewDate(date);
-        fetchScheduledPapers(date);
-      }
+    if (activeTab === "schedule" && scheduleViewDate) {
+      fetchScheduledPapers(scheduleViewDate);
     }
-  }, [papers]);
+  }, [activeTab, scheduleViewDate]);
 
   const fetchPresenterPapers = async () => {
     try {
@@ -250,6 +245,9 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
     if (!selectedPaper || !user?.email) return;
   
     try {
+      setIsSlotSelecting(true);
+      setSlotError(null);
+      
       const res = await axios.post("/papers/select-slot", {
         paperId: selectedPaper._id,
         date,
@@ -259,14 +257,23 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
       });
   
       if (res.data.success) {
-        toast.success("Slot selected successfully!");
         setPapers(prev =>
           prev.map(p => (p._id === selectedPaper._id ? res.data.data : p))
         );
+        toast.success("Slot selected successfully!");
         handleCloseDialog();
+        setSuccessMessage(`Successfully ${selectedPaper.selectedSlot ? 'changed' : 'selected'} slot for paper "${selectedPaper.title}"`);
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 5000);
       }
     } catch (err) {
+      setSlotError("Failed to select slot. Please try again.");
       toast.error("Failed to select slot");
+    } finally {
+      setIsSlotSelecting(false);
     }
   };
   
@@ -372,7 +379,7 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
     };
 
   const filteredScheduledPapers = scheduledPapers.filter((paper) => {
-    if (!showSchedule) return false;
+    if (activeTab !== "schedule") return false;
 
     const searchTermLower = searchTerm.toLowerCase().trim();
 
@@ -513,13 +520,35 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static" elevation={0}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+        <Toolbar sx={{ 
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          py: { xs: 2, sm: 0 },
+          gap: { xs: 1, sm: 0 }
+        }}>
+          <Typography variant="h6" component="div" sx={{ 
+            flexGrow: 1,
+            fontSize: { xs: '1.1rem', sm: '1.25rem' }
+          }}>
             Presenter Dashboard
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box sx={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: 2,
+            width: { xs: '100%', sm: 'auto' },
+            justifyContent: { xs: 'space-between', sm: 'flex-end' }
+          }}>
             <NotificationBell />
-            <Typography variant="body2">{user?.email}</Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: 'inherit',
+                display: 'block',
+                width: 'auto'
+              }}
+            >
+              {user?.email}
+            </Typography>
             <IconButton color="inherit" onClick={handleLogout}>
               <LogoutIcon />
             </IconButton>
@@ -527,13 +556,13 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="lg" sx={{ 
+        mt: { xs: 2, sm: 4 }, 
+        mb: { xs: 2, sm: 4 },
+        px: { xs: 1, sm: 2, md: 3 }
+      }}>
         {successMessage && (
-          <Alert
-            severity="success"
-            sx={{ mb: 2 }}
-            onClose={() => setSuccessMessage(null)}
-          >
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage(null)}>
             {successMessage}
           </Alert>
         )}
@@ -544,253 +573,227 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
           </Alert>
         )}
 
-        {papers.length === 0 ? (
-          <Paper
-            elevation={0}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            aria-label="presenter tabs"
+            variant={matchesXs ? "fullWidth" : "standard"}
             sx={{
-              p: 4,
-              textAlign: "center",
-              borderRadius: 2,
-              border: 1,
-              borderColor: "divider",
+              '& .MuiTab-root': {
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                minWidth: { xs: '50%', sm: 160 },
+              }
             }}
           >
-            <Typography variant="h6" color="textSecondary" gutterBottom>
-              No Papers Found
-            </Typography>
-            <Typography color="textSecondary">
-              You haven't submitted any papers yet.
-            </Typography>
-          </Paper>
-        ) : (
+            <Tab 
+              label="My Papers" 
+              value="mypapers"
+              icon={<AssignmentIcon />}
+              iconPosition="start"
+            />
+            <Tab 
+              label="Scheduled Papers" 
+              value="schedule"
+              icon={<EventIcon />}
+              iconPosition="start"
+            />
+          </Tabs>
+        </Box>
+
+        {activeTab === "mypapers" && (
           <>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h5" gutterBottom>
-                My Papers
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Search By</InputLabel>
-                    <Select
-                      value={searchCriteria}
-                      label="Search By"
-                      onChange={(e) =>
-                        setSearchCriteria(e.target.value as SearchCriteria)
-                      }
-                    >
-                      <MenuItem value="default">Default</MenuItem>
-                      <MenuItem value="paperId">Paper ID</MenuItem>
-                      <MenuItem value="title">Title</MenuItem>
-                      <MenuItem value="presenter">Presenter</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={8}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label={`Search by ${
-                      searchCriteria === "default"
-                        ? "all criteria"
-                        : searchCriteria
-                    }`}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon />
-                        </InputAdornment>
-                      ),
-                      endAdornment: searchTerm && (
-                        <InputAdornment position="end">
-                          <IconButton
-                            size="small"
-                            onClick={() => setSearchTerm("")}
-                            edge="end"
-                          >
-                            <CloseIcon fontSize="small" />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-              </Grid>
-            </Box>
-            
-            <Grid container spacing={3}>
-              {filteredPapers.map((paper) => (
-                <Grid item xs={12} key={paper._id}>
-                  <Card
-                    elevation={0}
-                    sx={{
-                      borderRadius: 2,
-                      border: 1,
-                      borderColor: "divider",
-                      "&:hover": {
-                        borderColor: "primary.main",
-                        boxShadow: 1,
-                      },
-                    }}
+            {papers.length === 0 ? (
+              <Paper
+                elevation={0}
+                sx={{
+                  p: { xs: 2, sm: 4 },
+                  textAlign: "center",
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: "divider",
+                }}
+              >
+                <Typography variant="h6" color="textSecondary" gutterBottom>
+                  No Papers Found
+                </Typography>
+                <Typography color="textSecondary">
+                  You haven't submitted any papers yet.
+                </Typography>
+              </Paper>
+            ) : (
+              <>
+                <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+                  <Typography 
+                    variant="h5" 
+                    gutterBottom
+                    sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}
                   >
-                    <CardContent>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "flex-start",
-                              mb: 2,
-                            }}
-                          >
-                            <Box>
-                              <Typography variant="h6" gutterBottom>
-                                {paper.title}
-                              </Typography>
+                    My Papers
+                  </Typography>
+                </Box>
+                
+                <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
+                  {papers.map((paper) => (
+                    <Grid item xs={12} key={paper._id}>
+                      <Card
+                        elevation={0}
+                        sx={{
+                          borderRadius: 2,
+                          border: 1,
+                          borderColor: "divider",
+                          "&:hover": {
+                            borderColor: "primary.main",
+                            boxShadow: 1,
+                          },
+                        }}
+                      >
+                        <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+                          <Grid container spacing={{ xs: 1, sm: 2 }}>
+                            <Grid item xs={12}>
                               <Box
                                 sx={{
                                   display: "flex",
-                                  gap: 1,
+                                  flexDirection: { xs: 'column', sm: 'row' },
+                                  justifyContent: "space-between",
+                                  alignItems: { xs: 'flex-start', sm: 'center' },
+                                  gap: { xs: 2, sm: 0 },
                                   mb: 2,
-                                  flexWrap: "wrap",
                                 }}
                               >
-                                <Chip
-                                  size="small"
-                                  icon={<DomainIcon />}
-                                  label={paper.domain}
-                                  color="primary"
-                                />
-                                <Chip
-                                  size="small"
-                                  icon={<AssignmentIcon />}
-                                  label={`Paper ID: ${paper.paperId}`}
-                                  color="secondary"
-                                />
-                                {paper.selectedSlot &&
-                                paper.selectedSlot.bookedBy ? (
-                                  <Chip
-                                    size="small"
-                                    icon={<CheckCircleIcon />}
-                                    label={
-                                      paper.selectedSlot.bookedBy === user?.email
-                                        ? "Booked by you"
-                                        : "Slot Booked"
-                                    }
-                                    color={
-                                      paper.selectedSlot.bookedBy === user?.email
-                                        ? "success"
-                                        : "default"
-                                    }
-                                  />
-                                ) : (
-                                  <Chip
-                                    size="small"
-                                    icon={<WarningIcon />}
-                                    label="No Slot Selected"
-                                    color="warning"
-                                  />
-                                )}
-                              </Box>
-                              {paper.selectedSlot &&
-                                paper.selectedSlot.bookedBy && (
+                                <Box sx={{ width: '100%' }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    gutterBottom
+                                    sx={{
+                                      fontSize: { xs: '1rem', sm: '1.25rem' },
+                                      wordBreak: 'break-word'
+                                    }}
+                                  >
+                                    {paper.title}
+                                  </Typography>
                                   <Box
                                     sx={{
                                       display: "flex",
                                       gap: 1,
+                                      mb: { xs: 1, sm: 2 },
                                       flexWrap: "wrap",
                                     }}
                                   >
                                     <Chip
                                       size="small"
-                                      icon={<EventIcon />}
-                                      label={format(
-                                        new Date(paper.selectedSlot.date),
-                                        "dd MMM yyyy"
-                                      )}
-                                      variant="outlined"
+                                      icon={<DomainIcon />}
+                                      label={paper.domain}
+                                      color="primary"
                                     />
                                     <Chip
                                       size="small"
-                                      icon={<RoomIcon />}
-                                      label={`Room ${paper.selectedSlot.room}`}
-                                      variant="outlined"
+                                      icon={<AssignmentIcon />}
+                                      label={`Paper ID: ${paper.paperId}`}
+                                      color="secondary"
                                     />
-                                    <Chip
-                                      size="small"
-                                      icon={<ScheduleIcon />}
-                                      label={paper.selectedSlot.session === 'Session 1' ? 
-                                        'Session 1 (9:00 AM - 12:00 PM)' : 
-                                        'Session 2 (1:00 PM - 4:00 PM)'}
-                                      variant="outlined"
-                                    />
-                                    {paper.selectedSlot.bookedBy !==
-                                      user?.email && (
+                                    {paper.selectedSlot && paper.selectedSlot.bookedBy ? (
                                       <Chip
                                         size="small"
-                                        icon={<PersonIcon />}
-                                        label={`Booked by: ${
-                                          paper.presenters.find(
-                                            (p) =>
-                                              p.email ===
-                                              paper.selectedSlot?.bookedBy
-                                          )?.name
-                                        }`}
-                                        variant="outlined"
+                                        icon={<CheckCircleIcon />}
+                                        label={paper.selectedSlot.bookedBy === user?.email ? 'Booked by you' : 'Slot Booked'}
+                                        color={paper.selectedSlot.bookedBy === user?.email ? 'success' : 'default'}
+                                      />
+                                    ) : (
+                                      <Chip
+                                        size="small"
+                                        icon={<WarningIcon />}
+                                        label="No Slot Selected"
+                                        color="warning"
                                       />
                                     )}
                                   </Box>
-                                )}
-                            </Box>
-                            <Box sx={{ display: "flex", gap: 1 }}>
-                              <Button
-                                variant="outlined"
-                                size="small"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleViewDetails(paper);
-                                }}
-                                startIcon={<PersonIcon />}
-                                tabIndex={0}
-                              >
-                                View Details
-                              </Button>
-                              {(!paper.selectedSlot?.bookedBy ||
-                                paper.selectedSlot?.bookedBy === user?.email) && (
-                                <Button
-                                  variant="contained"
-                                  size="small"
-                                  onClick={() => handleOpenDialog(paper)}
-                                  startIcon={<ScheduleIcon />}
-                                >
-                                  {paper.selectedSlot?.bookedBy
-                                    ? "Change Slot"
-                                    : "Select Slot"}
-                                </Button>
-                              )}
-                            </Box>
-                          </Box>
-                        </Grid>
-                      </Grid>
-                    </CardContent>
-                  </Card>
+                                  {paper.selectedSlot && paper.selectedSlot.bookedBy && (
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        gap: 1,
+                                        flexWrap: "wrap",
+                                        mb: { xs: 2, sm: 0 }
+                                      }}
+                                    >
+                                      <Chip
+                                        size="small"
+                                        icon={<EventIcon />}
+                                        label={format(
+                                          new Date(paper.selectedSlot.date),
+                                          "dd MMM yyyy"
+                                        )}
+                                        variant="outlined"
+                                      />
+                                      <Chip
+                                        size="small"
+                                        icon={<RoomIcon />}
+                                        label={`Room ${paper.selectedSlot.room}`}
+                                        variant="outlined"
+                                      />
+                                      <Chip
+                                        size="small"
+                                        icon={<ScheduleIcon />}
+                                        label={paper.selectedSlot.session === 'Session 1' ? 
+                                          'Session 1 (9:00 AM - 12:00 PM)' : 
+                                          'Session 2 (1:00 PM - 4:00 PM)'}
+                                        variant="outlined"
+                                      />
+                                    </Box>
+                                  )}
+                                </Box>
+                                <Box sx={{ 
+                                  display: "flex", 
+                                  gap: 1,
+                                  width: { xs: '100%', sm: 'auto' },
+                                  flexDirection: { xs: 'column', sm: 'row' }
+                                }}>
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleViewDetails(paper);
+                                    }}
+                                    startIcon={<PersonIcon />}
+                                    tabIndex={0}
+                                    fullWidth={matchesXs}
+                                  >
+                                    View Details
+                                  </Button>
+                                  {(!paper.selectedSlot?.bookedBy ||
+                                    paper.selectedSlot?.bookedBy === user?.email) && (
+                                    <Button
+                                      variant="contained"
+                                      size="small"
+                                      onClick={() => handleOpenDialog(paper)}
+                                      startIcon={<ScheduleIcon />}
+                                      fullWidth={matchesXs}
+                                    >
+                                      {paper.selectedSlot?.bookedBy
+                                        ? "Change Slot"
+                                        : "Select Slot"}
+                                    </Button>
+                                  )}
+                                </Box>
+                              </Box>
+                            </Grid>
+                          </Grid>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
+              </>
+            )}
           </>
         )}
 
-        {showSchedule && (
-          <Box sx={{ mt: 6 }}>
-            <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
-              Scheduled Presentations
-            </Typography>
-
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+        {activeTab === "schedule" && (
+          <Box>
+            <Grid container spacing={{ xs: 1, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 4 } }}>
               <Grid item xs={12} md={4}>
                 <LocalizationProvider dateAdapter={AdapterDateFns}>
                   <DatePicker
@@ -809,8 +812,17 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
                 </LocalizationProvider>
               </Grid>
               <Grid item xs={12} md={8}>
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                <Box sx={{ 
+                  display: "flex", 
+                  gap: 1,
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
+                  <FormControl 
+                    size="small" 
+                    sx={{ 
+                      minWidth: { xs: '100%', sm: 120 }
+                    }}
+                  >
                     <InputLabel>Search By</InputLabel>
                     <Select
                       value={searchCriteria}
@@ -853,7 +865,7 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
                 expanded={expandedDomain === domain}
                 onChange={handleDomainChange(domain)}
                 sx={{
-                  mb: 2,
+                  mb: { xs: 1, sm: 2 },
                   "&:before": { display: "none" },
                   borderRadius: "8px !important",
                   overflow: "hidden",
@@ -885,14 +897,14 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
                     />
                   </Box>
                 </AccordionSummary>
-                <AccordionDetails sx={{ p: 2 }}>
+                <AccordionDetails sx={{ p: { xs: 1, sm: 2 } }}>
                   {Object.entries(rooms).map(([room, roomEvents]) => (
                     <Accordion
                       key={`${domain}-${room}`}
                       expanded={expandedRooms[`${domain}-${room}`] || false}
                       onChange={handleAccordionRoomChange(`${domain}-${room}`)}
                       sx={{
-                        mb: 2,
+                        mb: { xs: 1, sm: 2 },
                         "&:before": { display: "none" },
                         borderRadius: 1,
                         overflow: "hidden",
@@ -920,9 +932,29 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
                           />
                         </Box>
                       </AccordionSummary>
-                      <AccordionDetails sx={{ p: 2 }}>
-                        <TableContainer>
-                          <Table size="medium" aria-label="schedule">
+                      <AccordionDetails sx={{ p: { xs: 1, sm: 2 } }}>
+                        <TableContainer sx={{ 
+                          maxWidth: '100%',
+                          overflowX: 'auto',
+                          '-webkit-overflow-scrolling': 'touch',
+                          '&::-webkit-scrollbar': {
+                            height: 6
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            backgroundColor: 'rgba(0,0,0,0.1)'
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            borderRadius: 3,
+                            backgroundColor: 'rgba(0,0,0,0.2)'
+                          }
+                        }}>
+                          <Table 
+                            size={matchesXs ? "small" : "medium"} 
+                            aria-label="schedule"
+                            sx={{
+                              minWidth: { xs: 650, sm: 800 }
+                            }}
+                          >
                             <TableHead>
                               <TableRow>
                                 <StyledTableCell>Time</StyledTableCell>
@@ -1067,16 +1099,21 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
           onClose={handleCloseDialog}
           maxWidth="sm"
           fullWidth
-          keepMounted={false}
-          disablePortal={false}
-          PaperProps={{
-            sx: {
-              borderRadius: 2,
-            },
+          sx={{
+            '& .MuiDialog-paper': {
+              margin: { xs: 1, sm: 2 },
+              width: { xs: 'calc(100% - 16px)', sm: '100%' },
+              maxHeight: { xs: 'calc(100% - 16px)', sm: '80vh' }
+            }
           }}
         >
           <DialogTitle>
-            <Typography variant="h6">Select Presentation Slot</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6">Select Presentation Slot</Typography>
+              {isSlotSelecting && (
+                <CircularProgress size={24} sx={{ ml: 2 }} />
+              )}
+            </Box>
           </DialogTitle>
           <DialogContent>
             {slotError && (
@@ -1085,15 +1122,31 @@ const [allSlotData, setAllSlotData] = useState<{ [date: string]: any[] }>({});
               </Alert>
             )}
             <Box sx={{ mt: 2 }}>
-            <SlotSelectionGrid
-  allSlotData={allSlotData}
-  onSlotSelect={handleSlotSelect} // sends slot to backend
-  onCancel={handleCloseDialog} // closes modal
-/>
-
+              <SlotSelectionGrid
+                allSlotData={allSlotData}
+                onSlotSelect={handleSlotSelect}
+                onCancel={handleCloseDialog}
+                disabled={isSlotSelecting}
+              />
             </Box>
           </DialogContent>
         </Dialog>
+
+        {/* Success Message Snackbar */}
+        <Snackbar
+          open={!!successMessage}
+          autoHideDuration={5000}
+          onClose={() => setSuccessMessage(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert 
+            onClose={() => setSuccessMessage(null)} 
+            severity="success"
+            sx={{ width: '100%' }}
+          >
+            {successMessage}
+          </Alert>
+        </Snackbar>
       </Container>
     </Box>
   );

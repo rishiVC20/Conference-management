@@ -12,12 +12,14 @@ interface SlotSelectionGridProps {
   };
   onSlotSelect: (params: { date: string; room: string; session: string }) => void;
   onCancel: () => void;
+  disabled?: boolean;
 }
 
 const SlotSelectionGrid: React.FC<SlotSelectionGridProps> = ({
   allSlotData,
   onSlotSelect,
   onCancel,
+  disabled = false
 }) => {
   const [selectedSlot, setSelectedSlot] = useState<{
     date: string;
@@ -27,7 +29,7 @@ const SlotSelectionGrid: React.FC<SlotSelectionGridProps> = ({
 
   const handleConfirm = () => {
     if (selectedSlot) {
-      onSlotSelect(selectedSlot); // Call the parent handler
+      onSlotSelect(selectedSlot);
     }
   };
 
@@ -41,10 +43,19 @@ const SlotSelectionGrid: React.FC<SlotSelectionGridProps> = ({
           <Grid container spacing={2}>
             {rooms.map(({ room, slots }) => (
               <Grid item xs={12} sm={6} md={4} key={`${date}-${room}`}>
-                <Paper sx={{ p: 2 }}>
-                  <Typography variant="subtitle1">{room}</Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
-                    {slots.map(({ session, isFull, disabled }) => {
+                <Paper 
+                  sx={{ 
+                    p: 2,
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: 2
+                    }
+                  }}
+                >
+                  <Typography variant="subtitle1" gutterBottom>{room}</Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {slots.map(({ session, isFull }) => {
                       const isSelected =
                         selectedSlot?.date === date &&
                         selectedSlot?.room === room &&
@@ -52,21 +63,19 @@ const SlotSelectionGrid: React.FC<SlotSelectionGridProps> = ({
 
                       return (
                         <Button
-  key={session}
-  fullWidth
-  variant={isSelected ? 'contained' : 'outlined'}
-  color={isSelected ? 'primary' : 'inherit'}
-  disabled={isFull || disabled}
-  onClick={() => setSelectedSlot({ date, room, session })}
->
-  {session === "Session 1"
-    ? "Session 1 (9:00 AM - 12:00 PM)"
-    : session === "Session 2"
-    ? "Session 2 (1:00 PM - 4:00 PM)"
-    : session}
-  {isFull || disabled ? " (Unavailable)" : ""}
-</Button>
-
+                          key={session}
+                          variant={isSelected ? 'contained' : 'outlined'}
+                          color={isSelected ? 'primary' : 'inherit'}
+                          onClick={() => setSelectedSlot({ date, room, session })}
+                          disabled={disabled || isFull}
+                          size="small"
+                          fullWidth
+                        >
+                          {session === "Session 1"
+                            ? "Session 1 (9:00 AM - 12:00 PM)"
+                            : "Session 2 (1:00 PM - 4:00 PM)"}
+                          {isFull ? " (Unavailable)" : ""}
+                        </Button>
                       );
                     })}
                   </Box>
@@ -77,13 +86,14 @@ const SlotSelectionGrid: React.FC<SlotSelectionGridProps> = ({
         </Box>
       ))}
 
-      <Box display="flex" justifyContent="flex-end" mt={3}>
-        <Button onClick={onCancel} sx={{ mr: 2 }}>
+      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Button onClick={onCancel} disabled={disabled}>
           Cancel
         </Button>
         <Button
           variant="contained"
-          disabled={!selectedSlot}
+          color="primary"
+          disabled={!selectedSlot || disabled}
           onClick={handleConfirm}
         >
           Confirm Slot

@@ -22,6 +22,7 @@ app.use(cookieParser());
 app.use(cors({
   origin: function(origin, callback) {
     const allowedOrigins = [
+      'http://192.168.29.29:3000',
       'https://conferencemanagement123.netlify.app',
       'https://confpict.netlify.app',
       'http://localhost:3000',
@@ -144,7 +145,7 @@ let server;
 
 async function startServer() {
   try {
-    server = app.listen(PORT, () => {
+    server = app.listen(PORT,'0.0.0.0', () => {
       console.log(`Server is running on port ${PORT} (${config.env} environment)`);
     });
   } catch (error) {

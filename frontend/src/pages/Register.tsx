@@ -1,4 +1,4 @@
-import { useState, ChangeEvent } from 'react';
+import { useState, ChangeEvent, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -14,8 +14,11 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
-  Snackbar
+  Snackbar,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -25,10 +28,14 @@ const Register: React.FC = () => {
     confirmPassword: '',
     role: 'attendee' as 'attendee' | 'presenter'
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const passwordInputRef = useRef<HTMLInputElement>();
+  const confirmPasswordInputRef = useRef<HTMLInputElement>();
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -43,6 +50,26 @@ const Register: React.FC = () => {
       ...prev,
       role: e.target.value as 'attendee' | 'presenter'
     }));
+  };
+
+  const handleClickShowPassword = (field: 'password' | 'confirmPassword') => {
+    const inputRef = field === 'password' ? passwordInputRef : confirmPasswordInputRef;
+    const cursorPosition = inputRef.current?.selectionStart || 0;
+    
+    if (field === 'password') {
+      setShowPassword(!showPassword);
+    } else {
+      setShowConfirmPassword(!showConfirmPassword);
+    }
+
+    // Preserve cursor position
+    setTimeout(() => {
+      inputRef.current?.setSelectionRange(cursorPosition, cursorPosition);
+    }, 0);
+  };
+
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,11 +157,26 @@ const Register: React.FC = () => {
             fullWidth
             name="password"
             label="Password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             id="password"
             autoComplete="new-password"
             value={formData.password}
             onChange={handleInputChange}
+            inputRef={passwordInputRef}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => handleClickShowPassword('password')}
+                    onMouseDown={handleMouseDownPassword}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <TextField
             margin="normal"
@@ -142,11 +184,26 @@ const Register: React.FC = () => {
             fullWidth
             name="confirmPassword"
             label="Confirm Password"
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             id="confirmPassword"
             autoComplete="new-password"
             value={formData.confirmPassword}
             onChange={handleInputChange}
+            inputRef={confirmPasswordInputRef}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle confirm password visibility"
+                    onClick={() => handleClickShowPassword('confirmPassword')}
+                    onMouseDown={handleMouseDownPassword}
+                    edge="end"
+                  >
+                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel id="role-label">Role</InputLabel>
