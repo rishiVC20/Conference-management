@@ -20,9 +20,7 @@ import DomainPaperChart from './pages/DomainPaperChart';
 import HomePage from './pages/HomePage';
 import Timetable from './pages/Timetable';
 import AdminSlotAllocationPage from './pages/AdminSlotAllocationPage';
-
-
-
+import Layout from './components/Layout';
 
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -68,33 +66,50 @@ const App: React.FC = () => {
           <AuthProvider>
             <NotificationProvider>
               <Routes>
+                {/* Auth routes without Layout */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+                {/* Public routes with Layout */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/timetable" element={
+                  <Layout>
+                    <Timetable />
+                  </Layout>
+                } />
+
+                {/* Protected routes with Layout */}
                 <Route
                   path="/presenter"
                   element={
                     <PrivateRoute role="presenter">
-                      <PresenterHome />
+                      <Layout>
+                        <PresenterHome />
+                      </Layout>
                     </PrivateRoute>
                   }
                 />
-                <Route path="/admin/slot-allocation" element={<AdminSlotAllocationPage />} />
                 <Route
                   path="/attendee"
                   element={
                     <PrivateRoute role="attendee">
-                      <AttendeeHome />
+                      <Layout>
+                        <AttendeeHome />
+                      </Layout>
                     </PrivateRoute>
                   }
                 />
-                <Route path="/chart-test" element={<DomainPaperChart />} />
+
+                {/* Admin routes with Layout */}
                 <Route
                   path="/admin"
                   element={
                     <PrivateRoute role="admin">
-                      <AdminHome />
+                      <Layout>
+                        <AdminHome />
+                      </Layout>
                     </PrivateRoute>
                   }
                 />
@@ -102,7 +117,9 @@ const App: React.FC = () => {
                   path="/admin/dashboard"
                   element={
                     <PrivateRoute role="admin">
-                      <AdminDashboard />
+                      <Layout>
+                        <AdminDashboard />
+                      </Layout>
                     </PrivateRoute>
                   }
                 />
@@ -110,7 +127,9 @@ const App: React.FC = () => {
                   path="/admin/schedule"
                   element={
                     <PrivateRoute role="admin">
-                      <ScheduleManager />
+                      <Layout>
+                        <ScheduleManager />
+                      </Layout>
                     </PrivateRoute>
                   }
                 />
@@ -118,7 +137,9 @@ const App: React.FC = () => {
                   path="/admin/communications"
                   element={
                     <PrivateRoute role="admin">
-                      <CommunicationCenter />
+                      <Layout>
+                        <CommunicationCenter />
+                      </Layout>
                     </PrivateRoute>
                   }
                 />
@@ -126,7 +147,9 @@ const App: React.FC = () => {
                   path="/admin/add-paper"
                   element={
                     <PrivateRoute role="admin">
-                      <AddPaper />
+                      <Layout>
+                        <AddPaper />
+                      </Layout>
                     </PrivateRoute>
                   }
                 />
@@ -134,7 +157,9 @@ const App: React.FC = () => {
                   path="/admin/presenters"
                   element={
                     <PrivateRoute role="admin">
-                      <PresenterManagement />
+                      <Layout>
+                        <PresenterManagement />
+                      </Layout>
                     </PrivateRoute>
                   }
                 />
@@ -142,13 +167,22 @@ const App: React.FC = () => {
                   path="/admin/add-special-session"
                   element={
                     <PrivateRoute role="admin">
-                      <AddSpecialSession />
+                      <Layout>
+                        <AddSpecialSession />
+                      </Layout>
                     </PrivateRoute>
                   }
                 />
-                <Route path="/" element={<HomePage />} />
-                <Route path="/timetable" element={<Timetable />} />
-
+                <Route
+                  path="/admin/slot-allocation"
+                  element={
+                    <PrivateRoute role="admin">
+                      <Layout>
+                        <AdminSlotAllocationPage />
+                      </Layout>
+                    </PrivateRoute>
+                  }
+                />
               </Routes>
             </NotificationProvider>
           </AuthProvider>

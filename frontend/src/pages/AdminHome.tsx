@@ -736,86 +736,127 @@ const AdminHome: React.FC = () => {
                               <StyledTableCell>Title</StyledTableCell>
                               <StyledTableCell>Paper-ID</StyledTableCell>
                               <StyledTableCell>Presenters</StyledTableCell>
-                              <StyledTableCell>Status</StyledTableCell>
+                              <StyledTableCell>Reported</StyledTableCell> {/* ✅ NEW */}
+                             <StyledTableCell>Mark As</StyledTableCell>
                               <StyledTableCell align="right">Actions</StyledTableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {roomPapers.map((paper) => (
-                              <StyledTableRow key={paper._id}>
-                                <StyledTableCell>
-                                  {paper.isSpecialSession ? (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <ScheduleIcon fontSize="small" color="action" />
-                                      {paper.startTime} - {paper.endTime}
-                                    </Box>
-                                  ) : (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <ScheduleIcon fontSize="small" color="action" />
-                                      {paper.selectedSlot?.session === 'Session 1' 
-                                        ? 'Session 1 (9:00 AM - 12:00 PM)'
-                                        : 'Session 2 (1:00 PM - 4:00 PM)'}
-                                    </Box>
-                                  )}
-                                </StyledTableCell>
-                                <StyledTableCell>
-                                  <Typography variant="body2">
-                                    {paper.title}
-                                  </Typography>
-                                  {paper.isSpecialSession && paper.sessionType && (
-                                    <Chip
-                                      size="small"
-                                      label={paper.sessionType}
-                                      color="secondary"
-                                      sx={{ mt: 0.5 }}
-                                    />
-                                  )}
-                                </StyledTableCell>
-                                <StyledTableCell>{paper.paperId}</StyledTableCell>
-                                <StyledTableCell>
-                                  {paper.isSpecialSession ? (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                      <PersonIcon fontSize="small" color="action" />
-                                      {paper.speaker}
-                                    </Box>
-                                  ) : (
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                      {paper.presenters.map((presenter, index) => (
-                                        <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                          <PersonIcon fontSize="small" color="action" />
-                                          {presenter.name}
-                                        </Box>
-                                      ))}
-                                    </Box>
-                                  )}
-                                </StyledTableCell>
-                                <StyledTableCell>
-                                  <Chip
-                                    label={paper.presentationStatus}
-                                    size="small"
-                                    sx={{
-                                      color: getStatusColor(paper.presentationStatus, theme),
-                                      bgcolor: getStatusBgColor(paper.presentationStatus, theme),
-                                      '&:hover': {
-                                        bgcolor: getStatusBgHoverColor(paper.presentationStatus, theme),
-                                      },
-                                    }}
-                                  />
-                                </StyledTableCell>
-                                <StyledTableCell align="right">
-                                  <Button
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={() => handleViewDetails(paper)}
-                                    startIcon={<EventIcon />}
-                                    fullWidth={matchesXs}
-                                  >
-                                    View Details
-                                  </Button>
-                                </StyledTableCell>
-                              </StyledTableRow>
-                            ))}
-                          </TableBody>
+  {roomPapers
+    .sort((a, b) => {
+      const timeA = a.isSpecialSession ? a.startTime : a.selectedSlot?.session;
+      const timeB = b.isSpecialSession ? b.startTime : b.selectedSlot?.session;
+      return (timeA || '').localeCompare(timeB || '');
+    })
+    .map((paper) => (
+      <StyledTableRow key={paper._id}>
+        <StyledTableCell>
+          {paper.isSpecialSession ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ScheduleIcon fontSize="small" color="action" />
+              {paper.startTime} - {paper.endTime}
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ScheduleIcon fontSize="small" color="action" />
+              {paper.selectedSlot?.session === 'Session 1' 
+                ? 'Session 1 (9:00 AM - 12:00 PM)'
+                : 'Session 2 (1:00 PM - 4:00 PM)'}
+            </Box>
+          )}
+        </StyledTableCell>
+
+        <StyledTableCell>
+          <Typography variant="body2">
+            {paper.title}
+          </Typography>
+          {paper.isSpecialSession && paper.sessionType && (
+            <Chip
+              size="small"
+              label={paper.sessionType}
+              color="secondary"
+              sx={{ mt: 0.5 }}
+            />
+          )}
+        </StyledTableCell>
+
+        <StyledTableCell>{paper.paperId}</StyledTableCell>
+
+        <StyledTableCell>
+          {paper.isSpecialSession ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <PersonIcon fontSize="small" color="action" />
+              {paper.speaker}
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {paper.presenters.map((presenter, index) => (
+  <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexDirection: 'column' }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <PersonIcon fontSize="small" color="action" />
+      <Typography variant="body2">{presenter.name}</Typography>
+    </Box>
+    <Typography variant="caption" color="text.secondary">
+      {presenter.phone}
+    </Typography>
+  </Box>
+              ))}
+            </Box>
+          )}
+        </StyledTableCell>
+
+        <StyledTableCell>
+          {!paper.isSpecialSession && (
+            <Box display="flex" alignItems="center" gap={1}>
+              <Switch
+                checked={!!paper.reported}
+                onChange={(e) =>
+                  handleReportedChange(paper._id, e.target.checked, setPapers, setError)
+                }
+                color="primary"
+              />
+              {paper.reported && (
+                <Typography variant="body2" color="text.primary">
+                  Reported
+                </Typography>
+              )}
+            </Box>
+          )}
+        </StyledTableCell>
+
+        <StyledTableCell>
+          {!paper.isSpecialSession && (
+            <FormControl size="small" fullWidth>
+              <Select
+                value={paper.presentationStatus}
+                onChange={(e) =>
+                  handleStatusChange(paper._id, e.target.value as Paper['presentationStatus'])
+                }
+                disabled={updatingStatus === paper._id}
+              >
+                <MenuItem value="Scheduled">Scheduled</MenuItem>
+                <MenuItem value="In Progress">In Progress</MenuItem>
+                <MenuItem value="Presented">Presented</MenuItem>
+                <MenuItem value="Cancelled">Cancelled</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+        </StyledTableCell>
+
+        <StyledTableCell align="right">
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => handleViewDetails(paper)}
+            startIcon={<EventIcon />}
+            fullWidth={matchesXs}
+          >
+            View Details
+          </Button>
+        </StyledTableCell>
+      </StyledTableRow>
+    ))}
+</TableBody>
                         </Table>
                       </TableContainer>
                     </AccordionDetails>

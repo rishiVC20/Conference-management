@@ -761,7 +761,7 @@ const PresenterHome = () => {
                                     tabIndex={0}
                                     fullWidth={matchesXs}
                                   >
-                                    View Details
+                                    Paper Details
                                   </Button>
                                   {(!paper.selectedSlot?.bookedBy ||
                                     paper.selectedSlot?.bookedBy === user?.email) && (

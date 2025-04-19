@@ -1,45 +1,35 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
-  AppBar,
-  Toolbar,
-  Typography,
   Container,
-  Button,
+  Typography,
   Box,
   Grid,
   Paper
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
 import DashboardStats from '../components/DashboardStats';
+import Layout from '../components/Layout';
+import { useLocation } from 'react-router-dom';
 
 const HomePage: React.FC = () => {
   const statsRef = useRef<HTMLDivElement | null>(null);
+  const location = useLocation();
 
   const handleScrollToStats = () => {
     statsRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  return (
-    <>
-      {/* Navbar */}
-      <AppBar position="sticky">
-        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Box display="flex" alignItems="center">
-            <img src="/logo.jpg" alt="PICT Logo" style={{ height: 40, marginRight: 10 }} />
-            <Typography variant="h6" component="div">
-              Conference 2026
-            </Typography>
-          </Box>
-          <Box>
-            <Button color="inherit" component={RouterLink} to="/">Home</Button>
-            <Button color="inherit" onClick={handleScrollToStats}>Dashboard</Button>
-            <Button color="inherit" component={RouterLink} to="/timetable">Timetable</Button>
-            <Button color="inherit" component={RouterLink} to="/login">Login</Button>
-            <Button color="inherit" component={RouterLink} to="/register">Register</Button>
-          </Box>
-        </Toolbar>
-      </AppBar>
+  useEffect(() => {
+    // Check if we have a hash in the URL
+    if (location.hash === '#dashboard') {
+      // Add a small delay to ensure the page is fully loaded
+      setTimeout(() => {
+        handleScrollToStats();
+      }, 100);
+    }
+  }, [location]);
 
+  return (
+    <Layout onScrollToDashboard={handleScrollToStats}>
       {/* Hero Section */}
       <Box
         sx={{
@@ -54,7 +44,9 @@ const HomePage: React.FC = () => {
           color: '#fff',
           bgcolor: 'rgba(0,0,0,0.5)',
           backgroundBlendMode: 'darken',
-          px: 2
+          px: 2,
+          mx: -3,
+          mt: -3
         }}
       >
         <Box>
@@ -90,7 +82,7 @@ const HomePage: React.FC = () => {
       </Container>
 
       {/* Dashboard Stats Section */}
-      <div ref={statsRef}>
+      <div ref={statsRef} id="dashboard">
         <DashboardStats />
       </div>
 
@@ -127,7 +119,7 @@ const HomePage: React.FC = () => {
       </Container>
 
       {/* Important Dates */}
-      <Box bgcolor="#f5f5f5" py={6}>
+      <Box bgcolor="#f5f5f5" py={6} mx={-3}>
         <Container>
           <Typography variant="h4" align="center" gutterBottom color="primary">
             Important Dates
@@ -141,7 +133,7 @@ const HomePage: React.FC = () => {
       </Box>
 
       {/* Footer */}
-      <Box textAlign="center" py={4} borderTop="1px solid #ddd" bgcolor="white">
+      <Box textAlign="center" py={4} borderTop="1px solid #ddd" bgcolor="white" mx={-3} mt={3}>
         <Typography variant="body2" color="text.secondary">
           © 2025 Conference 2026 | PICT, Pune
         </Typography>
@@ -149,7 +141,7 @@ const HomePage: React.FC = () => {
           Contact: info@conference2026.com
         </Typography>
       </Box>
-    </>
+    </Layout>
   );
 };
 
