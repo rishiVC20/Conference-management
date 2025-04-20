@@ -67,13 +67,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     cancelTokenRef.current = axios.CancelToken.source();
 
     const token = localStorage.getItem('auth_token');
-    if (!token) {
+    const savedUser = localStorage.getItem('auth_user');
+
+    if (!token || !savedUser) {
       setUser(null);
       setLoading(false);
-      if (!isPublic) navigate('/login', { replace: true });
+      navigate('/login', { replace: true });
       return;
     }
 
+    // If we have both token and user data, set the user immediately
+    setUser(JSON.parse(savedUser));
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
     try {
@@ -93,9 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-        if (!isPublic) {
-          navigate('/login', { replace: true });
-        }
+        navigate('/login', { replace: true });
       }
     } catch (error) {
       if (!axios.isCancel(error)) {
@@ -103,9 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-        if (!isPublic) {
-          navigate('/login', { replace: true });
-        }
+        navigate('/login', { replace: true });
       }
     } finally {
       setLoading(false);
