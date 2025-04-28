@@ -5,7 +5,7 @@ A full-stack web application for managing academic conferences, built with the M
 ## 🌟 Live Demo
 
 - Frontend: [https://conferencemanagement123.netlify.app](https://conferencemanagement123.netlify.app)
-- Backend: [[https://conference-app-backend-7295.onrender.com](https://conference-management-l4zg.onrender.com/)]
+- Backend: [https://conference-management-l4zg.onrender.com](https://conference-management-l4zg.onrender.com/)
 
 ## ✨ Features
 
