@@ -72,7 +72,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!token || !savedUser) {
       setUser(null);
       setLoading(false);
-      navigate('/login', { replace: true });
+      // Only redirect to login if not on a public route
+      if (!isPublic) {
+        navigate('/login', { replace: true });
+      }
       return;
     }
 
@@ -97,7 +100,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-        navigate('/login', { replace: true });
+        if (!isPublic) {
+          navigate('/login', { replace: true });
+        }
       }
     } catch (error) {
       if (!axios.isCancel(error)) {
@@ -105,7 +110,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(null);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-        navigate('/login', { replace: true });
+        if (!isPublic) {
+          navigate('/login', { replace: true });
+        }
       }
     } finally {
       setLoading(false);
