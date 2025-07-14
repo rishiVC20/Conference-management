@@ -69,7 +69,7 @@ mongoose.connect(config.mongodb.uri, config.mongodb.options)
   })
   .catch(err => {
     console.error('MongoDB connection error:', err);
-    process.exit(1);
+    // Do not exit the process; just log the error and continue running the server
   });
 
 // Routes
