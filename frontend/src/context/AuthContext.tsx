@@ -47,12 +47,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const cancelTokenRef = useRef<CancelTokenSource | null>(null);
 
-  const publicRoutes = ['/', '/dashboard', '/timetable', '/login', '/register', '/forgot-password', '/reset-password'];
+  const publicRoutes = ['/', '/timetable', '/login', '/register', '/forgot-password', '/reset-password'];
 
   const checkAuth = useCallback(async () => {
     if (isAuthChecking || isRegistering) return;
 
-    const isPublic = publicRoutes.some(path => location.pathname.startsWith(path));
+    // Use exact match for public routes
+    const isPublic = publicRoutes.includes(location.pathname);
     if (isPublic) {
       setLoading(false);
       return;
